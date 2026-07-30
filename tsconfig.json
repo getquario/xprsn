@@ -4,7 +4,13 @@
 		"moduleResolution": "NodeNext",
 		"noEmit": true,
 		"strict": true,
-		"target": "ES2024"
+		"target": "ES2024",
+		"allowJs": true,
+		"checkJs": true,
+		"noImplicitAny": false
 	},
-	"include": ["test/types.check.ts"]
+	"include": [
+		"src/**/*.js",
+		"test/types.check.ts"
+	]
 }

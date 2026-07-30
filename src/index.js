@@ -4,14 +4,23 @@
  * so no string-to-code construct is ever used and strict CSP is satisfied.
  */
 
+/** @import { XprsnErrorCode } from './index.js' */
+
 // Sticky matching prevents a failed string from restarting at every later quote.
 // `?.` must not swallow the `?` of a ternary before a bare decimal.
 const TOKEN = /\s+|\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|=>|[<>=!*]=|&&|\|\||\*\*|\S/y;
 let length, pos;
 let diags = new WeakMap(), mark = diags.set.bind(diags), origin = diags.get.bind(diags);
 export let isDiagnostic = diags.has.bind(diags);
+/**
+ * `code` is typed to the published union, so a code this module throws but
+ * `index.d.ts` does not declare fails to compile rather than shipping.
+ *
+ * @param {XprsnErrorCode} code
+ * @param {any} [own] The names set this diagnostic originated from, when there is one.
+ */
 let fault = (Type, msg, code, start, end, own) => {
-	let e = Type(msg);
+	let e = /** @type {Error & { code: XprsnErrorCode, start: number, end: number }} */ (Type(msg));
 	e.code = code;
 	e.start = start;
 	e.end = end;
@@ -23,7 +32,8 @@ let lex = s => {
 	pos = [];
 	for (TOKEN.lastIndex = 0; TOKEN.lastIndex < length; ) {
 		at = TOKEN.lastIndex;
-		t = TOKEN.exec(s)[0];
+		// TOKEN ends in `\S`, so a non-empty remainder always matches.
+		t = /** @type {RegExpExecArray} */ (TOKEN.exec(s))[0];
 		if (t === '"' || t === "'") throw fault(SyntaxError, 'Unexpected ' + t, 'XPRSN_SYNTAX', at, length);
 		if (t.trim()) out.push(t), pos.push(at);
 	}
@@ -43,6 +53,10 @@ let toks, i, fns, nm, fnm, bnd;
 // Shared empty set so the common no-`bound` path allocates nothing.
 let EMPTY = new Set();
 
+/**
+ * @param {XprsnErrorCode} [code]
+ * @returns {never}
+ */
 let err = (msg, code = 'XPRSN_SYNTAX', at = i) => {
 	let t = toks[at], p = t ? pos[at] : length;
 	throw fault(SyntaxError, msg, code, p, t ? p + t.length : p);
@@ -69,7 +83,7 @@ let str = (t, at) => {
 		return JSON.parse(t[0] === '"' ? t : '"' + t.slice(1, -1)
 			.replace(/\\.|"/g, c => c === "\\'" ? "'" : c === '"' ? '\\"' : c) + '"');
 	} catch (x) {
-		err(x.message, 'XPRSN_SYNTAX', at);
+		err(/** @type {Error} */ (x).message, 'XPRSN_SYNTAX', at);
 	}
 };
 
