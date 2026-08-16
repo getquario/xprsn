@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { compile, evaluate, isDiagnostic } from '../src/index.js';
+import { compile, evaluate, isDiagnostic } from '../lib/index.js';
 
 test('syntax errors', () => {
 	assert.throws(() => compile(''), /Unexpected end of expression/);
@@ -83,7 +83,7 @@ test('diagnostic provenance cannot be copied', () => {
 });
 
 test('diagnostic provenance is local to a module instance', async () => {
-	const other = await import('../src/index.js?instance=provenance');
+	const other = await import('../lib/index.js?instance=provenance');
 	let first, second;
 	try { compile('') } catch (e) { first = e }
 	try { other.compile('') } catch (e) { second = e }

@@ -1,4 +1,4 @@
-import { evaluate } from '/dist/index.js';
+import { evaluate } from '/lib/index.js';
 
 const result = document.querySelector('#result');
 const violations = [];

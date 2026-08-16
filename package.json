@@ -10,45 +10,43 @@
 		"url": "https://robinvdvleuten.nl"
 	},
 	"type": "module",
-	"module": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"module": "lib/index.js",
+	"types": "lib/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
+			"types": "./lib/index.d.ts",
+			"default": "./lib/index.js"
 		}
 	},
 	"engines": {
 		"node": ">=22.0.0"
 	},
 	"files": [
-		"dist"
+		"lib"
 	],
 	"size-limit": [
 		{
-			"path": "dist/index.js",
+			"path": "lib/index.js",
 			"limit": "1.85 kB"
 		}
 	],
 	"scripts": {
 		"bench": "node --disallow-code-generation-from-strings bench/index.js",
-		"build": "tsdown",
-		"check": "run-s build size test test:browser fuzz:regression",
+		"check": "run-s size test test:browser fuzz:regression",
 		"fuzz": "npm run fuzz:prepare && run-s fuzz:compile fuzz:evaluate fuzz:structured",
 		"fuzz:prepare": "node -e \"for (const x of ['compile','evaluate','structured']) require('fs').mkdirSync('.fuzz-corpus/'+x,{recursive:true})\"",
-		"fuzz:compile": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/compile.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/compile fuzz/corpus/compile -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
-		"fuzz:evaluate": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/evaluate.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/evaluate fuzz/corpus/evaluate -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
-		"fuzz:structured": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/structured.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/structured fuzz/corpus/structured -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
+		"fuzz:compile": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/compile.fuzz.js -i lib/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/compile fuzz/corpus/compile -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
+		"fuzz:evaluate": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/evaluate.fuzz.js -i lib/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/evaluate fuzz/corpus/evaluate -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
+		"fuzz:structured": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/structured.fuzz.js -i lib/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/structured fuzz/corpus/structured -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
 		"fuzz:regression": "run-s fuzz:regression:compile fuzz:regression:evaluate fuzz:regression:structured",
-		"fuzz:regression:compile": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/compile.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/compile -- -artifact_prefix=fuzz/",
-		"fuzz:regression:evaluate": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/evaluate.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/evaluate -- -artifact_prefix=fuzz/",
-		"fuzz:regression:structured": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/structured.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/structured -- -artifact_prefix=fuzz/",
-		"prepublishOnly": "npm run build",
+		"fuzz:regression:compile": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/compile.fuzz.js -i lib/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/compile -- -artifact_prefix=fuzz/",
+		"fuzz:regression:evaluate": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/evaluate.fuzz.js -i lib/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/evaluate -- -artifact_prefix=fuzz/",
+		"fuzz:regression:structured": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/structured.fuzz.js -i lib/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/structured -- -artifact_prefix=fuzz/",
 		"size": "size-limit",
 		"test": "run-s test:unit test:types",
 		"test:unit": "node --disallow-code-generation-from-strings --test --test-concurrency=1 test/*.test.js",
-		"test:browser": "npm run build && playwright install chromium && node test/browser/harness.js",
-		"test:types": "tsc"
+		"test:browser": "playwright install chromium && node test/browser/harness.js",
+		"test:types": "tsc && attw --pack . --profile esm-only"
 	},
 	"keywords": [
 		"expression",
@@ -58,13 +56,13 @@
 		"evaluate"
 	],
 	"devDependencies": {
+		"@arethetypeswrong/cli": "^0.18.3",
 		"@jazzer.js/bug-detectors": "^4.0.0",
 		"@jazzer.js/core": "^4.0.0",
-		"@size-limit/file": "^12.1.0",
+		"@size-limit/preset-small-lib": "^12.1.0",
 		"npm-run-all": "^4.1.5",
 		"playwright": "^1.61.1",
 		"size-limit": "^12.1.0",
-		"tsdown": "^0.22.12",
-		"typescript": "^7.0.2"
+		"typescript": "7.0.2"
 	}
 }

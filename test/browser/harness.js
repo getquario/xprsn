@@ -17,7 +17,7 @@ const CSP = [
 const files = new Map([
 	['/', ['text/html; charset=utf-8', await readFile(new URL('./index.html', import.meta.url))]],
 	['/browser.js', ['text/javascript; charset=utf-8', await readFile(new URL('./browser.js', import.meta.url))]],
-	['/dist/index.js', ['text/javascript; charset=utf-8', await readFile(new URL('../../dist/index.js', import.meta.url))]],
+	['/lib/index.js', ['text/javascript; charset=utf-8', await readFile(new URL('../../lib/index.js', import.meta.url))]],
 ]);
 
 const server = http.createServer((request, response) => {
