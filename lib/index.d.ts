@@ -5,24 +5,24 @@
 type Fn = (...args: any[]) => any;
 
 export type XprsnErrorCode =
-	| 'XPRSN_SYNTAX'
-	| 'XPRSN_UNKNOWN_FUNCTION'
-	| 'XPRSN_TOO_DEEP'
-	| 'XPRSN_NULL_BASE'
-	| 'XPRSN_BLOCKED_KEY'
-	| 'XPRSN_NOT_CALLABLE';
+  | "XPRSN_SYNTAX"
+  | "XPRSN_UNKNOWN_FUNCTION"
+  | "XPRSN_TOO_DEEP"
+  | "XPRSN_NULL_BASE"
+  | "XPRSN_BLOCKED_KEY"
+  | "XPRSN_NOT_CALLABLE";
 
 export interface XprsnDiagnostic extends Error {
-	readonly code: XprsnErrorCode;
-	readonly start: number;
-	readonly end: number;
+  readonly code: XprsnErrorCode;
+  readonly start: number;
+  readonly end: number;
 }
 
 export interface XprsnEvaluator {
-	(values?: Record<string, any>): any;
-	names: string[];
-	functions: string[];
-	isDiagnostic(error: unknown): error is XprsnDiagnostic;
+  (values?: Record<string, any>): any;
+  names: string[];
+  functions: string[];
+  isDiagnostic(error: unknown): error is XprsnDiagnostic;
 }
 
 /**
@@ -49,9 +49,9 @@ export function isDiagnostic(error: unknown): error is XprsnDiagnostic;
  * @throws {SyntaxError} On malformed input or unknown function names.
  */
 export function compile(
-	src: string,
-	funcs?: Record<string, Fn>,
-	opts?: { bound?: Iterable<string> }
+  src: string,
+  funcs?: Record<string, Fn>,
+  opts?: { bound?: Iterable<string> },
 ): XprsnEvaluator;
 
 /**
@@ -62,7 +62,7 @@ export function compile(
  * @param funcs Functions callable from the expression.
  */
 export function evaluate(
-	src: string,
-	values?: Record<string, any>,
-	funcs?: Record<string, Fn>
+  src: string,
+  values?: Record<string, any>,
+  funcs?: Record<string, Fn>,
 ): any;

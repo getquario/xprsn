@@ -1,15 +1,12 @@
 {
-	"compilerOptions": {
-		"module": "NodeNext",
-		"moduleResolution": "NodeNext",
-		"noEmit": true,
-		"strict": true,
-		"target": "ES2024",
-		"allowJs": true,
-		"checkJs": true
-	},
-	"include": [
-		"lib/**/*.js",
-		"test/types.check.ts"
-	]
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "strict": true,
+    "target": "ES2024",
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["lib/**/*.js", "test/types.check.ts"]
 }

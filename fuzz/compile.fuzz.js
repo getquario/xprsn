@@ -1,5 +1,5 @@
-import { compileOnly } from './lib.js';
+import { compileOnly } from "./lib.js";
 
 export function fuzz(data) {
-	compileOnly(data.toString('utf8'));
+  compileOnly(data.toString("utf8"));
 }

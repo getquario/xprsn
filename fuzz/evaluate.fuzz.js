@@ -1,5 +1,5 @@
-import { evalSafe } from './lib.js';
+import { evalSafe } from "./lib.js";
 
 export function fuzz(data) {
-	evalSafe(data.toString('utf8'), {});
+  evalSafe(data.toString("utf8"), {});
 }

@@ -16,19 +16,19 @@ A tiny, CSP-safe expression language for JavaScript. **~1.8KB min+compressed, ze
 Evaluates expressions like `user.age > 18 and "admin" in user.roles` against data you provide, without running them as JavaScript. xprsn parses each expression into a chain of plain closures, so there is no `eval` and no `new Function`.
 
 ```js
-import { compile, evaluate, isDiagnostic } from 'xprsn';
+import { compile, evaluate, isDiagnostic } from "xprsn";
 
 // One-shot:
-evaluate('items[0].price * qty > 100', { items: [{ price: 60 }], qty: 2 });
+evaluate("items[0].price * qty > 100", { items: [{ price: 60 }], qty: 2 });
 // => true
 
 // Compile once, evaluate many times:
 const isAdmin = compile('user.age > 18 and "admin" in user.roles');
-isAdmin({ user: { age: 30, roles: ['admin'] } }); // => true
-isAdmin({ user: { age: 16, roles: [] } });        // => false
+isAdmin({ user: { age: 30, roles: ["admin"] } }); // => true
+isAdmin({ user: { age: 16, roles: [] } }); // => false
 
 // Custom functions (third argument of evaluate, second of compile):
-evaluate('lower(name) == "robin"', { name: 'ROBIN' }, { lower: s => s.toLowerCase() });
+evaluate('lower(name) == "robin"', { name: "ROBIN" }, { lower: (s) => s.toLowerCase() });
 // => true
 ```
 
@@ -48,7 +48,7 @@ Parses the expression and returns an evaluator function `(values?) => result`. T
 The evaluator also carries `names`: the variables the expression reads, deduplicated. Property names, hash keys, and registry functions don't count; only the roots do.
 
 ```js
-const fn = compile('user.age > 18 and (discount ?? 0) > 0');
+const fn = compile("user.age > 18 and (discount ?? 0) > 0");
 fn.names; // => ['user', 'discount']
 ```
 
@@ -57,7 +57,7 @@ That one array covers a lot of ground when expressions come from your users: val
 The evaluator also exposes `functions`: the registry functions the expression calls (methods like `s.trim()` are not counted).
 
 ```js
-const fn = compile('sum(price) > budget', { sum: xs => xs.reduce((a, b) => a + b, 0) });
+const fn = compile("sum(price) > budget", { sum: (xs) => xs.reduce((a, b) => a + b, 0) });
 fn.functions; // => ['sum']
 ```
 
@@ -66,7 +66,7 @@ Unknown functions already throw at compile time, so this is for introspection ra
 If your host injects its own variables into scope — a `@` for the current row, a `$` for the root, loop variables — pass them as `options.bound` so they're left out of `names`, which then reports only the caller-relevant free variables. Bound names still resolve normally at evaluation time; only the introspection output changes.
 
 ```js
-compile('@.price * qty', {}, { bound: ['@'] }).names; // => ['qty']
+compile("@.price * qty", {}, { bound: ["@"] }).names; // => ['qty']
 ```
 
 ### `evaluate(expression, values?, functions?)`
@@ -77,7 +77,7 @@ There is no built-in parse cache; if you evaluate the same expressions repeatedl
 
 ```js
 const cache = new Map();
-const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(expr);
+const cached = (expr) => cache.get(expr) ?? cache.set(expr, compile(expr)).get(expr);
 ```
 
 ### Error diagnostics
@@ -98,24 +98,24 @@ Each function returned by `compile` also has `isDiagnostic(error)`. This narrowe
 
 ## Syntax
 
-| Category | Syntax |
-| --- | --- |
-| Literals | `42`, `4.2`, `.5`, `1e3`, `"double"`, `'single'`, `true`, `false`, `null` |
-| Arrays | `[1, 2, 3]` |
-| Hashes | `{"key": value}`, `{key: value}` |
-| Arithmetic | `+` `-` `*` `/` `%` `**` |
-| Concatenation | `"id-" ~ n` (string concat; coerces both sides) |
-| Comparison | `==` `!=` `<` `>` `<=` `>=` (strict: `1 == "1"` is `false`) |
-| Logical | `and` `&&` `or` `\|\|` `not` `!` (with short-circuiting) |
-| Membership | `"admin" in roles` (arrays: `includes`; strings: substring; objects: own keys only) |
-| Ternary | `a ? b : c`, and the `a ?: b` shorthand |
-| Null coalescing | `a ?? b`, chains as `a ?? b ?? c` |
-| Access | `user.name`, `user["name"]`, `items[0]`, `items[i + 1]` |
-| Null-safe access | `user?.name`, `items?.[0]`, `name?.toUpperCase()` |
-| Method calls | `name.toUpperCase()`, `items.indexOf(2)` |
-| Functions | `lower(name)`, resolved only from the registry you pass in |
-| Lambdas | `sum(rows, r => r.price)` (single param; a per-item function for host reducers) |
-| Identifiers | letters, digits, `_`, and `$` / `@` (e.g. `$price`, `@.total`) |
+| Category         | Syntax                                                                              |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| Literals         | `42`, `4.2`, `.5`, `1e3`, `"double"`, `'single'`, `true`, `false`, `null`           |
+| Arrays           | `[1, 2, 3]`                                                                         |
+| Hashes           | `{"key": value}`, `{key: value}`                                                    |
+| Arithmetic       | `+` `-` `*` `/` `%` `**`                                                            |
+| Concatenation    | `"id-" ~ n` (string concat; coerces both sides)                                     |
+| Comparison       | `==` `!=` `<` `>` `<=` `>=` (strict: `1 == "1"` is `false`)                         |
+| Logical          | `and` `&&` `or` `\|\|` `not` `!` (with short-circuiting)                            |
+| Membership       | `"admin" in roles` (arrays: `includes`; strings: substring; objects: own keys only) |
+| Ternary          | `a ? b : c`, and the `a ?: b` shorthand                                             |
+| Null coalescing  | `a ?? b`, chains as `a ?? b ?? c`                                                   |
+| Access           | `user.name`, `user["name"]`, `items[0]`, `items[i + 1]`                             |
+| Null-safe access | `user?.name`, `items?.[0]`, `name?.toUpperCase()`                                   |
+| Method calls     | `name.toUpperCase()`, `items.indexOf(2)`                                            |
+| Functions        | `lower(name)`, resolved only from the registry you pass in                          |
+| Lambdas          | `sum(rows, r => r.price)` (single param; a per-item function for host reducers)     |
+| Identifiers      | letters, digits, `_`, and `$` / `@` (e.g. `$price`, `@.total`)                      |
 
 `==`/`!=` are strict (JS loose equality is a footgun). `~` joins its sides as strings (`1 ~ 2` is `"12"`) and binds looser than arithmetic but tighter than comparison, so `"total: " ~ a + b` joins the sum. Absence reads as `null`: an unknown variable or a missing property is `null` (not `undefined`), so `x == null` is the natural "is it there?" test; present `null`/`0`/`false`/`""` are untouched, and registry function return values are left as-is. Reading _through_ a null base still throws, so use `?.` for that — `a?.b` yields `null` on a nullish base and guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out `matches`, ranges (`..`), and bitwise operators.
 
@@ -124,7 +124,7 @@ Each function returned by `compile` also has `isDiagnostic(error)`. This narrowe
 [sjabloon](https://github.com/getquario/sjabloon), the template engine built on xprsn, is the concrete case. It layers a fresh child scope on every `{{#each}}` iteration with `Object.create`, so a loop variable and the surrounding variables coexist and an inner name shadows an outer one of the same name. In that setting a plain name always resolves to the nearest scope. Binding `$` and `@` gives an expression a fixed handle on a chosen level instead: set `@` to the current item and `$` to the root, and `@.price * $.taxRate` says exactly which scope each name comes from.
 
 ```js
-evaluate('@.price * $.taxRate', { '@': { price: 20 }, '$': { taxRate: 1.21 } });
+evaluate("@.price * $.taxRate", { "@": { price: 20 }, $: { taxRate: 1.21 } });
 // => 24.2
 ```
 
@@ -134,9 +134,9 @@ Expressions have no local variables. When a calculation needs intermediate resul
 
 ```js
 const steps = [
-  ['subtotal', 'price * qty'],
-  ['discount', 'subtotal >= 100 ? subtotal * 0.1 : 0'],
-  ['total', 'subtotal - discount + shipping'],
+  ["subtotal", "price * qty"],
+  ["discount", "subtotal >= 100 ? subtotal * 0.1 : 0"],
+  ["total", "subtotal - discount + shipping"],
 ].map(([name, expr]) => [name, compile(expr)]);
 
 function run(values) {
@@ -160,16 +160,23 @@ const reducers = {
   sum: (rows, f) => rows.reduce((total, row) => total + f(row), 0),
 };
 
-evaluate('sum(orders, order => order.price * order.qty)', {
-  orders: [{ price: 20, qty: 2 }, { price: 5, qty: 4 }],
-}, reducers);
+evaluate(
+  "sum(orders, order => order.price * order.qty)",
+  {
+    orders: [
+      { price: 20, qty: 2 },
+      { price: 5, qty: 4 },
+    ],
+  },
+  reducers,
+);
 // => 60
 ```
 
 A lambda takes one bare parameter (no parentheses) and its body is any expression. That body parses to closures like everything else, so every read still passes through the same guard. A lambda adds no route to code execution: `order => order.constructor` throws just as `x.constructor` does. The parameter binds in a child scope, so it shadows an outer variable of the same name and drops out of `names`:
 
 ```js
-compile('sum(orders, r => r.price * tax)', reducers).names; // => ['orders', 'tax']
+compile("sum(orders, r => r.price * tax)", reducers).names; // => ['orders', 'tax']
 ```
 
 Because the reducers are yours, you decide what they do: `sum`, `count`, `avg`, `any`, `map`, or a running total that keeps state between calls. xprsn only hands each one a per-item function. It never iterates for you, and a lambda cannot call itself (`f => f(f)` is a compile-time error), so an expression can't recurse into an infinite loop.

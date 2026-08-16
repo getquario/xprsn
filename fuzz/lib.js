@@ -1,17 +1,23 @@
-import { compile, evaluate } from '../lib/index.js';
+import { compile, evaluate } from "../lib/index.js";
 
-const isCompileErr = e => e instanceof SyntaxError;
-const isEvalErr = e =>
-	e instanceof SyntaxError ||
-	e instanceof TypeError ||
-	(e instanceof RangeError && /stack|Maximum call/i.test(String(e.message)));
+const isCompileErr = (e) => e instanceof SyntaxError;
+const isEvalErr = (e) =>
+  e instanceof SyntaxError ||
+  e instanceof TypeError ||
+  (e instanceof RangeError && /stack|Maximum call/i.test(String(e.message)));
 
 export function compileOnly(src) {
-	try { compile(src); }
-	catch (e) { if (!isCompileErr(e)) throw e; }
+  try {
+    compile(src);
+  } catch (e) {
+    if (!isCompileErr(e)) throw e;
+  }
 }
 
 export function evalSafe(src, values, funcs) {
-	try { evaluate(src, values, funcs); }
-	catch (e) { if (!isEvalErr(e)) throw e; }
+  try {
+    evaluate(src, values, funcs);
+  } catch (e) {
+    if (!isEvalErr(e)) throw e;
+  }
 }
