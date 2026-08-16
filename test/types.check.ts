@@ -16,6 +16,7 @@ if (isDiagnostic(error)) {
 	const code: XprsnErrorCode = diagnostic.code;
 	const start: number = diagnostic.start;
 	const end: number = diagnostic.end;
+	void [code, start, end];
 }
 
 const fn = compile('user.age > 18 and (discount ?? 0) > 0');
@@ -26,6 +27,7 @@ fn();                                   // values arg is optional
 if (fn.isDiagnostic(error)) {
 	const diagnostic: XprsnDiagnostic = error;
 	const code: XprsnErrorCode = diagnostic.code;
+	void code;
 }
 
 const names: string[] = fn.names;
@@ -37,3 +39,7 @@ compile('fmt(price)', { fmt: (n: number) => String(n) })({ price: 4.5 });
 // evaluate is the one-shot form
 const out: any = evaluate('a + b', { a: 1, b: 2 });
 evaluate('lower(name)', { name: 'X' }, { lower: (s: string) => s.toLowerCase() });
+
+// These bindings exist to assert types, not to be read; consuming them here is
+// what keeps the file clean under `no-unused-vars`, matching treffer's suite.
+void [evaluator, names, functions, out];

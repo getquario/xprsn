@@ -1,0 +1,11 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"overrides": [
+		{
+			// These harnesses throw from `finally` on purpose: a pollution or
+			// mutation finding must outrank an in-flight expected error.
+			"files": ["fuzz/**"],
+			"rules": { "no-unsafe-finally": "off" }
+		}
+	]
+}
