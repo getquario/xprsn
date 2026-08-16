@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { FuzzedDataProvider } from '@jazzer.js/core';
-import { compile, isDiagnostic } from '../src/index.js';
+import { compile, isDiagnostic } from '../lib/index.js';
 
 const OPS = ['+','-','*','/','%','**','~','==','!=','<','>','<=','>=','and','or','&&','||','??','in'];
 const UNARY = ['!','-','+','not '];
@@ -8,7 +8,7 @@ const KEYS = ['a','b','c','x','y','z','foo','bar','val','n'];
 const BLOCKED = ['__proto__', 'constructor', 'prototype'];
 
 // Registry passed to compile so the fuzzer exercises the function-call and
-// arrow-lambda reducer paths (src/index.js). Every function is TOTAL — it never
+// arrow-lambda reducer paths (lib/index.js). Every function is TOTAL — it never
 // throws on its own, so the only errors reaching the oracle come from xprsn
 // (via get()) inside a lambda body, keeping any non-eval throw a real signal.
 const asArr = x => (Array.isArray(x) ? x : []);
@@ -26,7 +26,7 @@ const FUNCS = {
 };
 const PLAIN = ['id', 'add', 'len'];
 const REDUCERS = ['sum', 'count', 'map', 'first'];
-// Method names for the postfix `expr.m()` path (get() + m.apply in src/index.js).
+// Method names for the postfix `expr.m()` path (get() + m.apply in lib/index.js).
 // A base lacking the method makes the lookup null -> TypeError, which is expected.
 const METHODS = ['trim', 'toUpperCase', 'toLowerCase', 'slice', 'includes', 'indexOf', 'charAt', 'join'];
 

@@ -1,6 +1,6 @@
 // Manual micro-benchmarks for xprsn. Run with `npm run bench`.
 import assert from 'node:assert/strict';
-import { compile, evaluate } from '../src/index.js';
+import { compile, evaluate } from '../lib/index.js';
 
 let sink = 0;
 

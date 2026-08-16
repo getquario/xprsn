@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { compile, evaluate, isDiagnostic } from '../src/index.js';
+import { compile, evaluate, isDiagnostic } from '../lib/index.js';
 
 let caught = fn => {
 	try { fn() }
@@ -81,7 +81,7 @@ test('runtime diagnostic provenance is scoped to its evaluator', () => {
 });
 
 test('runtime provenance is local to a module instance', async () => {
-	const other = await import('../src/index.js?instance=runtime-provenance');
+	const other = await import('../lib/index.js?instance=runtime-provenance');
 	const first = compile('a.b');
 	const second = other.compile('a.b');
 	const one = caught(() => first({ a: null }));
@@ -212,7 +212,7 @@ test('a param named for a blocked key stays inert', () => {
 });
 
 test('source contains no string-to-code constructs', () => {
-	const src = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+	const src = readFileSync(new URL('../lib/index.js', import.meta.url), 'utf8');
 	assert.ok(!/\beval\b|\bFunction\s*\(|new\s+Function/.test(src));
 });
 

@@ -6,11 +6,10 @@
 		"strict": true,
 		"target": "ES2024",
 		"allowJs": true,
-		"checkJs": true,
-		"noImplicitAny": false
+		"checkJs": true
 	},
 	"include": [
-		"src/**/*.js",
+		"lib/**/*.js",
 		"test/types.check.ts"
 	]
 }

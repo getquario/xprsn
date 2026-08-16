@@ -8,7 +8,7 @@ import {
 	type XprsnDiagnostic,
 	type XprsnErrorCode,
 	type XprsnEvaluator,
-} from '../src/index.js';
+} from '../lib/index.js';
 
 const error: unknown = new Error();
 if (isDiagnostic(error)) {

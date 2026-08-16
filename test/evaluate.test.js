@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { compile, evaluate } from '../src/index.js';
+import { compile, evaluate } from '../lib/index.js';
 
 test('literals', () => {
 	assert.strictEqual(evaluate('42'), 42);

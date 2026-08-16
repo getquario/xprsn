@@ -1,4 +1,4 @@
-import { compile, evaluate } from '../src/index.js';
+import { compile, evaluate } from '../lib/index.js';
 
 const isCompileErr = e => e instanceof SyntaxError;
 const isEvalErr = e =>
