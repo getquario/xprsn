@@ -12,6 +12,18 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    groups:
+      fuzz:
+        patterns:
+          - "@jazzer/*"
+      lint:
+        patterns:
+          - "oxfmt"
+          - "oxlint"
+      size:
+        patterns:
+          - "@size-limit/*"
+          - "size-limit"
 
   - package-ecosystem: "github-actions"
     directory: "/"
