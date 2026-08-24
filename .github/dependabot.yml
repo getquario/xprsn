@@ -20,6 +20,7 @@ updates:
         patterns:
           - "oxfmt"
           - "oxlint"
+          - "oxlint-*"
       size:
         patterns:
           - "@size-limit/*"
