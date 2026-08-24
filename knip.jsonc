@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  // Roots reached by `node <path>` and `jazzer <path>` from npm scripts rather
+  // than by import, so nothing in the graph points at them: the benchmark
+  // harness (`npm run bench`), and the fuzz targets plus the `--customHooks`
+  // module (`npm run fuzz`) -- the hooks module being the only importer of
+  // @jazzer.js/bug-detectors, which is what keeps that devDependency visible
+  // with no `ignoreDependencies` entry. `fuzz/lib.js` is deliberately absent:
+  // it is an ordinary module the targets import, and knip does not check
+  // exports in entry files, so listing it would blind the gate to a dead
+  // helper in the one file here that can grow one.
+  "entry": ["bench/index.js", "fuzz/*.fuzz.js", "fuzz/hooks.js"],
+  // Knip's own default file set, restated because setting this key replaces it,
+  // plus `bench/` and `fuzz/` without the `!` production suffix. That suffix is
+  // what marks a pattern as production code: the production run negates every
+  // pattern lacking it, which is how both trees -- neither of them in `files` --
+  // stay out of a graph their entries are already negated from.
+  "project": ["**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!", "bench/**", "fuzz/**"],
+  // The browser page imports what the harness serves it, by served path rather
+  // than by specifier -- no file exists at this path on disk.
+  "ignoreUnresolved": ["/lib/index.js"],
+}
