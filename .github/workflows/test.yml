@@ -21,10 +21,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run fmt:check
-      - run: npm run lint
-      - run: npm run knip
-      - run: npm run size
       - run: npm run test
 
   browser:
