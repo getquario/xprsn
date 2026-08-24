@@ -297,7 +297,11 @@ const checkDiag = (e, src, required, fn) => {
 // the pristine baseline captured once at load. Cheap: a length and two `===`.
 const OP = Object.prototype;
 const PROTO_KEYS = Object.getOwnPropertyNames(OP).length;
+// Captured for identity comparison alone, never called — `unbound-method` reads
+// pinning a prototype method as the scoping hazard of calling one.
+// oxlint-disable-next-line typescript/unbound-method
 const PROTO_HAS_OWN = OP.hasOwnProperty;
+// oxlint-disable-next-line typescript/unbound-method
 const PROTO_TO_STRING = OP.toString;
 const protoIntact = () =>
   Object.getOwnPropertyNames(OP).length === PROTO_KEYS &&

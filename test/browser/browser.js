@@ -23,6 +23,7 @@ const throwsTypeError = (source, values, functions) => {
 try {
   assert(evaluate("a + b", { a: 2, b: 3 }) === 5, "ordinary expression failed");
 
+  /** @type {[string, Record<string, unknown>][]} */
   const blocked = [
     ['a.constructor.constructor("return globalThis")', { a: {} }],
     ['a["constructor"]', { a: {} }],
