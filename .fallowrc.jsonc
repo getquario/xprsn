@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  // Reached by `tsc` through tsconfig's `include`, not by an import or a script
+  // path, so it sits outside the graph fallow walks from package.json.
+  "entry": ["test/types.check.ts"],
+  "ignoreDependencies": ["@size-limit/preset-small-lib"],
+  "health": {
+    "ignore": ["bench/**", "fuzz/**"],
+  },
+  "typeAware": {
+    "enabled": true,
+    "projects": ["tsconfig.json"],
+    "require": "best-effort",
+  },
+}
