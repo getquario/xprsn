@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { FuzzedDataProvider } from "@jazzer.js/core";
 import { compile, isDiagnostic } from "../lib/index.js";
+import { isCompileErr, isEvalErr } from "./lib.js";
 
 const OPS = [
   "+",
@@ -258,11 +259,6 @@ function buildValues(data, names) {
   return vals;
 }
 
-const isCompileErr = (e) => e instanceof SyntaxError;
-const isEvalErr = (e) =>
-  e instanceof SyntaxError ||
-  e instanceof TypeError ||
-  (e instanceof RangeError && /stack|Maximum call/i.test(String(e.message)));
 const CODES = new Set([
   "XPRSN_SYNTAX",
   "XPRSN_UNKNOWN_FUNCTION",

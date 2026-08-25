@@ -1,7 +1,7 @@
 import { compile, evaluate } from "../lib/index.js";
 
-const isCompileErr = (e) => e instanceof SyntaxError;
-const isEvalErr = (e) =>
+export const isCompileErr = (e) => e instanceof SyntaxError;
+export const isEvalErr = (e) =>
   e instanceof SyntaxError ||
   e instanceof TypeError ||
   (e instanceof RangeError && /stack|Maximum call/i.test(String(e.message)));
