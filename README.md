@@ -15,6 +15,16 @@ A tiny, CSP-safe expression language for JavaScript. **~2.0KB min+compressed, ze
 
 Evaluates expressions like `user.age > 18 and "admin" in user.roles` against data you provide, without running them as JavaScript. xprsn parses each expression into a chain of plain closures, so there is no `eval` and no `new Function`.
 
+## Install
+
+```bash
+npm install xprsn
+```
+
+Node.js 22 or newer, ESM only.
+
+## Usage
+
 ```js
 import { compile, evaluate, isDiagnostic } from "xprsn";
 
@@ -43,7 +53,7 @@ Pretty far. The same trick, a one-regex tokenizer feeding a parser that emits cl
 
 ### `compile(expression, functions?, options?)`
 
-Parses the expression and returns an evaluator function `(values?) => result`. Throws a `SyntaxError` on malformed input or unknown function names, so a bad expression fails at compile time rather than during evaluation.
+Parses the expression and returns an evaluator function `(values?) => result`. Malformed input and unknown function names throw a `SyntaxError` at compile time.
 
 The evaluator also carries `names`: the variables the expression reads, deduplicated. Property names, hash keys, and registry functions don't count; only the roots do.
 
@@ -52,7 +62,7 @@ const fn = compile("user.age > 18 and (discount ?? 0) > 0");
 fn.names; // => ['user', 'discount']
 ```
 
-That one array covers a lot of ground when expressions come from your users: validate a rule against your schema before saving it (`fn.names.every(n => n in schema)`), drive autocomplete in a rule editor, or find which stored rules read a field you're about to rename. It also pairs with the multi-step pattern below, where each step's `names` are its dependencies.
+When expressions come from your users, `names` is how you check a rule against a schema before saving it (`fn.names.every(n => n in schema)`), or how you find which stored rules read a field you're about to rename. In the multi-step pattern below, each step's `names` are its dependencies.
 
 The evaluator also exposes `functions`: the registry functions the expression calls (methods like `s.trim()` are not counted).
 
@@ -61,9 +71,9 @@ const fn = compile("sum(price) > budget", { sum: (xs) => xs.reduce((a, b) => a +
 fn.functions; // => ['sum']
 ```
 
-Unknown functions already throw at compile time, so this is for introspection rather than safety: check a stored expression against the functions available in its context before running it, for example rejecting an aggregate like `sum(...)` where no row group is in scope.
+Unknown functions already throw at compile time. Use `functions` to check a stored expression against what its context allows, for example rejecting `sum(...)` where no row group is in scope.
 
-If your host injects its own variables into scope — a `@` for the current row, a `$` for the root, loop variables — pass them as `options.bound` so they're left out of `names`, which then reports only the caller-relevant free variables. Bound names still resolve normally at evaluation time; only the introspection output changes.
+If your host injects its own variables into scope (`@` for the current row, `$` for the root, loop variables), pass them as `options.bound` so they're left out of `names`. Bound names still resolve at evaluation time; only the introspection output changes.
 
 ```js
 compile("@.price * qty", {}, { bound: ["@"] }).names; // => ['qty']
@@ -94,7 +104,7 @@ Errors thrown by registered functions, getters, methods, or value coercion hooks
 
 Use `isDiagnostic(error)` when a host needs to distinguish those errors. It returns `true` only for errors created by the same xprsn module instance. Copying a documented `code`, `start`, and `end` onto another error does not authenticate it. A diagnostic from another installed copy or module instance also returns `false`.
 
-Each function returned by `compile` also has `isDiagnostic(error)`. This narrower predicate returns `true` only for runtime guard errors created by that evaluator, so an embedder can relocate its source span without mistaking an authentic xprsn error thrown by a host function, getter, method, or coercion hook for the outer expression's error. Compile-time diagnostics occur before an evaluator exists and authenticate only through the package-level predicate. The one-shot `evaluate` API does not expose its temporary evaluator; use `compile` when scoped authentication is required.
+Each function returned by `compile` also has `isDiagnostic(error)`. It returns `true` only for runtime guard errors created by that evaluator. An embedder can relocate a source span without treating a host function, getter, method, or coercion error as the outer expression's error. Compile-time diagnostics happen before an evaluator exists, so they authenticate only through the package-level predicate. `evaluate` does not expose its temporary evaluator; use `compile` when you need scoped authentication.
 
 ## Syntax
 
@@ -117,7 +127,9 @@ Each function returned by `compile` also has `isDiagnostic(error)`. This narrowe
 | Lambdas          | `sum(rows, r => r.price)` (single param; a per-item function for host reducers)     |
 | Identifiers      | letters, digits, `_`, and `$` / `@` (e.g. `$price`, `@.total`)                      |
 
-`==`/`!=` are strict (JS loose equality is a footgun). `~` joins its sides as strings (`1 ~ 2` is `"12"`) and binds looser than arithmetic but tighter than comparison, so `"total: " ~ a + b` joins the sum. Absence reads as `null`: an unknown variable or a missing property is `null` (not `undefined`), so `x == null` is the natural "is it there?" test; present `null`/`0`/`false`/`""` are untouched, and registry function return values are left as-is. Reading _through_ a null base still throws, so use `?.` for that — `a?.b` yields `null` on a nullish base and guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out `matches`, ranges (`..`), and bitwise operators.
+`==`/`!=` are strict (JS loose equality is a footgun). `~` joins its sides as strings (`1 ~ 2` is `"12"`) and binds looser than arithmetic but tighter than comparison, so `"total: " ~ a + b` joins the sum.
+
+Absence reads as `null`: an unknown variable or a missing property is `null` (not `undefined`), so `x == null` is the natural "is it there?" test. Present `null`/`0`/`false`/`""` are untouched, and registry function return values are left as-is. Reading _through_ a null base still throws, so use `?.`: `a?.b` yields `null` on a nullish base and guards each step on its own. Chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out `matches`, ranges (`..`), and bitwise operators.
 
 `$` and `@` are ordinary identifier characters, so a variable can be named `$` or `@` (they still read through the same prototype guard). On their own they buy little, since xprsn reads from one flat values object. They pay off once a host stacks nested scopes.
 
@@ -191,7 +203,7 @@ Content-Security-Policy: script-src 'self'
 
 It needs no `unsafe-eval` because the compiler only composes arrow functions that already exist in the shipped source; it never turns expression text into JavaScript. The test suite runs under `node --disallow-code-generation-from-strings`, which throws on any string-to-code construct the same way a strict CSP does, and a test checks the source for such constructs. The library never touches the DOM, so you don't need a Trusted Types policy.
 
-`npm run test:browser` builds the ESM bundle and verifies this policy in Playwright Chromium, including representative blocked-key escape attempts. This proves CSP compatibility, not containment of registry functions or host objects you deliberately expose.
+`npm run test:browser` serves `lib/` to Playwright Chromium under this policy, including blocked-key reads that should throw. The run checks that the library itself works under CSP. It does not sandbox registry functions or host objects you pass in.
 
 ## Safety
 
@@ -208,7 +220,20 @@ Expressions can still call methods on the values you expose (`user.delete()`, sa
 
 ## Environments
 
-Node.js 22 and newer are supported through the ESM and CommonJS builds. Browser use is supported through a standards-based ESM bundler in environments supporting ES2024. Direct `<script>` globals and UMD builds are not provided.
+Node.js 22 and newer, ESM only. Browser use is supported through a standards-based ESM bundler in environments supporting ES2024. Direct `<script>` globals, UMD, and CommonJS builds are not provided.
+
+Shipping CommonJS alongside ESM would put two copies of the core in any process that mixed `require` and `import`. Each copy would have its own diagnostic identity, so `isDiagnostic` would return `false` across the seam.
+
+## Contributing
+
+```bash
+git clone https://github.com/getquario/xprsn.git
+cd xprsn
+npm install
+npm run check
+```
+
+`npm run check` is the local gate. Conventions for this repo live in [AGENTS.md](AGENTS.md).
 
 ## License
 
