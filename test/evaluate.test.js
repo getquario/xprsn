@@ -11,6 +11,11 @@ test("literals", () => {
   assert.strictEqual(evaluate("'hello'"), "hello");
   assert.strictEqual(evaluate('"it\\"s"'), 'it"s');
   assert.strictEqual(evaluate("'it\\'s'"), "it's");
+  assert.strictEqual(
+    evaluate("'say \"hi\"'"),
+    'say "hi"',
+    "bare double quote in a single-quoted string",
+  );
   assert.strictEqual(evaluate('"line\\nbreak"'), "line\nbreak");
   assert.strictEqual(
     evaluate(String.raw`'a\"b'`),
