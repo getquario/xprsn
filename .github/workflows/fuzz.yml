@@ -16,72 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  regression:
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [compile, evaluate, structured]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run fuzz:regression:${{ matrix.target }}
-      - if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: fuzz-${{ matrix.target }}-regression
-          path: |
-            fuzz/crash-*
-            fuzz/timeout-*
-            fuzz/oom-*
-            fuzz/leak-*
-            fuzz/slow-unit-*
-          if-no-files-found: ignore
-          retention-days: 14
-
-  discovery:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [compile, evaluate, structured]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - id: jazzer
-        run: echo "version=$(node -p "require('@jazzer.js/core/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .fuzz-corpus/${{ matrix.target }}
-          key: fuzz-${{ runner.os }}-node${{ steps.jazzer.outputs.version }}-${{ matrix.target }}-${{ github.run_id }}
-          restore-keys: |
-            fuzz-${{ runner.os }}-node${{ steps.jazzer.outputs.version }}-${{ matrix.target }}-
-      - run: npm run fuzz:prepare && npm run fuzz:${{ matrix.target }}
-      - if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: fuzz-${{ matrix.target }}-discovery
-          path: |
-            fuzz/crash-*
-            fuzz/timeout-*
-            fuzz/oom-*
-            fuzz/leak-*
-            fuzz/slow-unit-*
-          if-no-files-found: ignore
-          retention-days: 14
+  fuzz:
+    uses: getquario/meta/.github/workflows/fuzz.yml@main
+    with:
+      targets: '["compile","evaluate","structured"]'
