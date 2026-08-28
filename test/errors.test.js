@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compile, evaluate, isDiagnostic } from "../lib/index.js";
+import { compile, evaluate, isDiagnostic, relocate } from "../lib/index.js";
+
+let caught = (fn) => {
+  try {
+    fn();
+  } catch (e) {
+    return e;
+  }
+  assert.fail("expected an error");
+};
 
 test("syntax errors", () => {
   assert.throws(() => compile(""), /Unexpected end of expression/);
@@ -144,4 +153,69 @@ test("captured provenance operations resist later prototype replacement", () => 
     WeakMap.prototype.get = get;
     WeakMap.prototype.has = has;
   }
+});
+
+test("relocate returns an authenticated copy in the embedder's coordinates", () => {
+  const original = caught(() => compile("1 + )"));
+  const moved = relocate(original, { prefix: "cell.value [=1 + )]: ", offset: 1 });
+
+  assert.ok(moved instanceof SyntaxError, "same constructor as the original");
+  assert.strictEqual(moved.message, "cell.value [=1 + )]: " + original.message);
+  assert.strictEqual(moved.code, original.code);
+  assert.deepStrictEqual([moved.start, moved.end], [original.start + 1, original.end + 1]);
+  assert.ok(isDiagnostic(moved), "the copy is authenticated");
+  assert.notStrictEqual(moved, original);
+  assert.deepStrictEqual([original.start, original.end], [4, 5], "the original is left untouched");
+});
+
+test("relocate defaults to no prefix and no shift", () => {
+  const original = caught(() => compile("1 +"));
+  const moved = relocate(original);
+  assert.strictEqual(moved.message, original.message);
+  assert.deepStrictEqual([moved.start, moved.end], [original.start, original.end]);
+  assert.ok(isDiagnostic(moved));
+});
+
+test("relocate preserves the per-compile origin of a runtime diagnostic", () => {
+  const fn = compile("a.b");
+  const original = caught(() => fn({ a: null }));
+  const moved = relocate(original, { prefix: "detail: ", offset: 2 });
+  assert.ok(fn.isDiagnostic(moved), "still recognized by the evaluator that threw it");
+  assert.strictEqual(moved.code, "XPRSN_NULL_BASE");
+  assert.ok(moved instanceof TypeError, "runtime faults keep their own constructor");
+});
+
+test("relocate refuses anything that is not an xprsn diagnostic", () => {
+  const spoof = Object.assign(SyntaxError("spoof"), {
+    code: "XPRSN_SYNTAX",
+    start: 0,
+    end: 1,
+  });
+  for (const value of [null, undefined, 1, "XPRSN_SYNTAX", {}, SyntaxError("host"), spoof])
+    assert.throws(() => relocate(value), TypeError);
+});
+
+test("relocate does not mint a diagnostic through a replaced constructor", () => {
+  const d = caught(() => compile("1 +"));
+  const real = SyntaxError.prototype.constructor;
+  try {
+    SyntaxError.prototype.constructor = function () {
+      return { pwned: true };
+    };
+    const moved = relocate(d, { prefix: "x: " });
+    assert.ok(moved instanceof SyntaxError, "the class comes from a captured table");
+    assert.ok(!Object.hasOwn(moved, "pwned"));
+    assert.ok(isDiagnostic(moved));
+  } finally {
+    SyntaxError.prototype.constructor = real;
+  }
+});
+
+test("relocate degrades to a plain Error when the original's prototype was replaced", () => {
+  const d = caught(() => compile("1 +"));
+  Object.setPrototypeOf(d, Object.create(null));
+
+  const moved = relocate(d, { prefix: "x: " });
+  assert.ok(moved instanceof Error, "an unrecognized class falls back to Error");
+  assert.ok(isDiagnostic(moved), "and is still authenticated");
 });

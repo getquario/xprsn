@@ -68,7 +68,7 @@
   "size-limit": [
     {
       "path": "lib/index.js",
-      "limit": "2.0 kB"
+      "limit": "2.15 kB"
     }
   ],
   "engines": {

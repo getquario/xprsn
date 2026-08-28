@@ -106,6 +106,23 @@ Use `isDiagnostic(error)` when a host needs to distinguish those errors. It retu
 
 Each function returned by `compile` also has `isDiagnostic(error)`. It returns `true` only for runtime guard errors created by that evaluator. An embedder can relocate a source span without treating a host function, getter, method, or coercion error as the outer expression's error. Compile-time diagnostics happen before an evaluator exists, so they authenticate only through the package-level predicate. `evaluate` does not expose its temporary evaluator; use `compile` when you need scoped authentication.
 
+#### Relocating a diagnostic
+
+An embedder that compiles xprsn source out of a larger document — a cell in a report, a field in a form — reports the fault in its own coordinates, not the expression's. `relocate(diagnostic, { prefix, offset })` returns the copy to re-throw:
+
+```js
+import { compile, isDiagnostic, relocate } from "xprsn";
+
+try {
+  compile(cell.slice(1)); // the leading "=" is not part of the expression
+} catch (error) {
+  if (!isDiagnostic(error)) throw error;
+  throw relocate(error, { prefix: "cell.value: ", offset: 1 });
+}
+```
+
+The copy keeps the original's class, prepends `prefix` to the message verbatim, shifts `start` and `end` by `offset`, and carries every other field across. It is registered exactly as the original was, so it passes `isDiagnostic` and — for a runtime fault — the evaluator's own `isDiagnostic` too. The original is left untouched. Relocation belongs here rather than in the embedder because authentication is by identity: a copy an embedder builds itself cannot be authenticated, and a field added to a diagnostic here would be a field the embedder's copy silently drops. Passing anything but a diagnostic from this instance throws a `TypeError`.
+
 ## Syntax
 
 | Category         | Syntax                                                                              |

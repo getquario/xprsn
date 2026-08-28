@@ -31,6 +31,18 @@ export interface XprsnEvaluator {
 export function isDiagnostic(error: unknown): error is XprsnDiagnostic;
 
 /**
+ * Copy a diagnostic into an embedder's coordinates: `prefix` is prepended to
+ * the message verbatim, `offset` shifts the span, every other field is carried
+ * over, and the copy is authenticated exactly as the original was.
+ *
+ * @throws {TypeError} When `diag` is not a diagnostic from this instance.
+ */
+export function relocate(
+  diag: unknown,
+  opts?: { prefix?: string; offset?: number },
+): XprsnDiagnostic;
+
+/**
  * Compile an expression once, evaluate it many times.
  *
  * The returned evaluator exposes `names` (the free variables the expression
