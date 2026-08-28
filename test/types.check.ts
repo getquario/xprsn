@@ -5,9 +5,12 @@ import {
   compile,
   evaluate,
   isDiagnostic,
+  signatures,
   type XprsnDiagnostic,
   type XprsnErrorCode,
   type XprsnEvaluator,
+  type XprsnRead,
+  type XprsnSignature,
 } from "../lib/index.js";
 
 const error: unknown = new Error();
@@ -31,7 +34,10 @@ if (fn.isDiagnostic(error)) {
 }
 
 const names: string[] = fn.names;
+const reads: XprsnRead[] = fn.reads;
 const functions: string[] = fn.functions;
+const sigs: XprsnSignature[] = signatures({ fmt: (n: number) => String(n) });
+signatures(); // registry arg is optional
 
 // funcs registry is optional and typed as functions
 compile("fmt(price)", { fmt: (n: number) => String(n) })({ price: 4.5 });
@@ -42,4 +48,4 @@ evaluate("lower(name)", { name: "X" }, { lower: (s: string) => s.toLowerCase() }
 
 // These bindings exist to assert types, not to be read; consuming them here is
 // what keeps the file clean under `no-unused-vars`, matching treffer's suite.
-void [evaluator, names, functions, out];
+void [evaluator, names, reads, functions, sigs, out];

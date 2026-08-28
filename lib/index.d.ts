@@ -18,9 +18,24 @@ export interface XprsnDiagnostic extends Error {
   readonly end: number;
 }
 
+/** One root-name read, with its span in the source expression. */
+export interface XprsnRead {
+  name: string;
+  start: number;
+  end: number;
+}
+
+/** One registry entry described: `doc` is absent unless the function carries one. */
+export interface XprsnSignature {
+  name: string;
+  arity: number;
+  doc?: string;
+}
+
 export interface XprsnEvaluator {
   (values?: Record<string, any>): any;
   names: string[];
+  reads: XprsnRead[];
   functions: string[];
   isDiagnostic(error: unknown): error is XprsnDiagnostic;
 }
@@ -46,7 +61,9 @@ export function relocate(
  * Compile an expression once, evaluate it many times.
  *
  * The returned evaluator exposes `names` (the free variables the expression
- * reads) and `functions` (the registry functions it calls), both deduplicated.
+ * reads) and `functions` (the registry functions it calls), both deduplicated,
+ * plus `reads`: every root-name read with its source span, in source order,
+ * duplicates and bound names kept — `names` is its free, deduplicated view.
  * Property names, hash keys, and method names are not included. Unknown
  * variables and missing properties evaluate to `null` (reading through a null
  * base still throws); validate expected variables yourself via `names`.
@@ -65,6 +82,14 @@ export function compile(
   funcs?: Record<string, Fn>,
   opts?: { bound?: Iterable<string> },
 ): XprsnEvaluator;
+
+/**
+ * Describe a function registry: one signature per entry, in the registry's own
+ * key order. `arity` is `fn.length`, unless the function carries its own
+ * numeric `arity` — the escape hatch for rest params and wrappers. `doc` comes
+ * from the function's own `doc` string when it has one.
+ */
+export function signatures(funcs?: Record<string, Fn>): XprsnSignature[];
 
 /**
  * Compile and evaluate an expression in one go.

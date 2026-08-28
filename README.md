@@ -79,6 +79,23 @@ If your host injects its own variables into scope (`@` for the current row, `$` 
 compile("@.price * qty", {}, { bound: ["@"] }).names; // => ['qty']
 ```
 
+The evaluator also carries `reads`: every root-name read with its span in the source, in source order. Duplicates and bound names are kept — `names` is the free, deduplicated view of `reads`. This is what an editor squiggles, hovers, and jumps from.
+
+```js
+compile("@.price * qty", {}, { bound: ["@"] }).reads;
+// => [{ name: '@', start: 0, end: 1 }, { name: 'qty', start: 10, end: 13 }]
+```
+
+### `signatures(functions?)`
+
+Describes a registry: one `{ name, arity, doc }` per entry, in the registry's own key order. `arity` is the function's declared parameter count (`fn.length`), unless the function carries its own numeric `arity` — the escape hatch for rest params and wrappers, whose `length` misleads. `doc` is the function's own `doc` string when it has one, and absent otherwise. This is what an editor shows as a signature hint on `sum(`.
+
+```js
+const sum = (rows, of) => rows.reduce((t, r) => t + of(r), 0);
+sum.doc = "sum(rows, of): total of a projection";
+signatures({ sum }); // => [{ name: 'sum', arity: 2, doc: 'sum(rows, of): total of a projection' }]
+```
+
 ### `evaluate(expression, values?, functions?)`
 
 Shorthand for `compile(expression, functions)(values)`.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compile, evaluate } from "../lib/index.js";
+import { compile, evaluate, signatures } from "../lib/index.js";
 
 test("literals", () => {
   assert.strictEqual(evaluate("42"), 42);
@@ -275,6 +275,79 @@ test("bound names are excluded from free variables", () => {
     ["f"],
     "functions are unaffected by bound",
   );
+});
+
+test("compiled functions expose located reads", () => {
+  assert.deepStrictEqual(compile("a + b").reads, [
+    { name: "a", start: 0, end: 1 },
+    { name: "b", start: 4, end: 5 },
+  ]);
+  assert.deepStrictEqual(
+    compile("a + a").reads,
+    [
+      { name: "a", start: 0, end: 1 },
+      { name: "a", start: 4, end: 5 },
+    ],
+    "every occurrence, in source order — names is the deduplicated view",
+  );
+  assert.deepStrictEqual(
+    compile("user.name.toUpperCase()").reads,
+    [{ name: "user", start: 0, end: 4 }],
+    "only the root, not properties or methods",
+  );
+  assert.deepStrictEqual(
+    compile("f(a)", { f: (x) => x }).reads,
+    [{ name: "a", start: 2, end: 3 }],
+    "a function name is a call, not a read",
+  );
+  assert.deepStrictEqual(compile('42 + "x"').reads, [], "literals read nothing");
+  assert.deepStrictEqual(
+    compile("items[i + 1]").reads,
+    [
+      { name: "items", start: 0, end: 5 },
+      { name: "i", start: 6, end: 7 },
+    ],
+    "index expressions are scanned too",
+  );
+});
+
+test("reads keep bound names that names omits", () => {
+  const f = compile("@.price * qty", {}, { bound: ["@"] });
+  assert.deepStrictEqual(f.names, ["qty"], "names stays the free subset");
+  assert.deepStrictEqual(
+    f.reads,
+    [
+      { name: "@", start: 0, end: 1 },
+      { name: "qty", start: 10, end: 13 },
+    ],
+    "a bound read is still a read",
+  );
+  assert.deepStrictEqual(
+    compile("sum(xs, x => x.v)", { sum: (xs, of) => xs.map(of) }).reads,
+    [
+      { name: "xs", start: 4, end: 6 },
+      { name: "x", start: 13, end: 14 },
+    ],
+    "a lambda body's param read is located; the declaration is not a read",
+  );
+});
+
+test("signatures describe a function registry", () => {
+  const lower = (s) => s.toLowerCase();
+  const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+  assert.deepStrictEqual(signatures({ lower, clamp }), [
+    { name: "lower", arity: 1 },
+    { name: "clamp", arity: 3 },
+  ]);
+  const total = (...rows) => rows.length;
+  total.arity = 1;
+  total.doc = "total(rows): count the rows";
+  assert.deepStrictEqual(
+    signatures({ total }),
+    [{ name: "total", arity: 1, doc: "total(rows): count the rows" }],
+    "an own arity beats a rest-param length of 0; doc comes along",
+  );
+  assert.deepStrictEqual(signatures(), [], "no registry, no signatures");
 });
 
 test("compiled functions expose the registry functions they call", () => {
