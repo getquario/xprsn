@@ -275,6 +275,11 @@ test("bound names are excluded from free variables", () => {
     ["f"],
     "functions are unaffected by bound",
   );
+  assert.throws(
+    () => compile("a", {}, { bound: /** @type {any} */ (false) }),
+    TypeError,
+    "a non-iterable bound throws at compile time",
+  );
 });
 
 test("compiled functions expose located reads", () => {
