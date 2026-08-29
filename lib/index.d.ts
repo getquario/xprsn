@@ -2,8 +2,6 @@
  * Hand-written declarations — bundler type generation is disabled.
  */
 
-type Fn = (...args: any[]) => any;
-
 export type XprsnErrorCode =
   | "XPRSN_SYNTAX"
   | "XPRSN_UNKNOWN_FUNCTION"
@@ -79,7 +77,7 @@ export function relocate(
  */
 export function compile(
   src: string,
-  funcs?: Record<string, Fn>,
+  funcs?: Record<string, (...args: any[]) => any>,
   opts?: { bound?: Iterable<string> },
 ): XprsnEvaluator;
 
@@ -89,7 +87,7 @@ export function compile(
  * numeric `arity` — the escape hatch for rest params and wrappers. `doc` comes
  * from the function's own `doc` string when it has one.
  */
-export function signatures(funcs?: Record<string, Fn>): XprsnSignature[];
+export function signatures(funcs?: Record<string, (...args: any[]) => any>): XprsnSignature[];
 
 /**
  * Compile and evaluate an expression in one go.
@@ -101,5 +99,5 @@ export function signatures(funcs?: Record<string, Fn>): XprsnSignature[];
 export function evaluate(
   src: string,
   values?: Record<string, any>,
-  funcs?: Record<string, Fn>,
+  funcs?: Record<string, (...args: any[]) => any>,
 ): any;
