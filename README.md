@@ -1,6 +1,6 @@
 # xprsn
 
-A tiny, CSP-safe expression language for JavaScript. **~2.0KB min+compressed, zero dependencies.**
+A tiny, CSP-safe expression language for JavaScript. **~2.0KB min+compressed, one tiny dependency.**
 
 [![NPM version](https://img.shields.io/npm/v/xprsn.svg)](https://www.npmjs.com/package/xprsn)
 [![Build Status](https://github.com/getquario/xprsn/actions/workflows/test.yml/badge.svg)](https://github.com/getquario/xprsn/actions/workflows/test.yml)
@@ -15,18 +15,36 @@ A tiny, CSP-safe expression language for JavaScript. **~2.0KB min+compressed, ze
 
 Evaluates expressions like `user.age > 18 and "admin" in user.roles` against data you provide, without running them as JavaScript. xprsn parses each expression into a chain of plain closures, so there is no `eval` and no `new Function`.
 
+That makes it a fit wherever the expression is written by someone other than you — a rule in a form builder, a filter in a query UI, a formula in a spreadsheet cell, a condition on a workflow step — and especially where a strict Content Security Policy rules out the usual `new Function` shortcut.
+
+## Contents
+
+- [Install](#install)
+- [Usage](#usage)
+- [Is xprsn the right tool?](#is-xprsn-the-right-tool)
+- [More than one expression?](#more-than-one-expression)
+- [Syntax](#syntax)
+- [Recipes](#recipes)
+- [API](#api)
+- [Safety](#safety)
+- [Content Security Policy](#content-security-policy)
+- [Environments](#environments)
+- [Embedding xprsn](#embedding-xprsn)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Install
 
 ```bash
 npm install xprsn
 ```
 
-Node.js 22 or newer, ESM only.
+Node.js 22 or newer, ESM only. TypeScript declarations ship with the package; nothing extra to install.
 
 ## Usage
 
 ```js
-import { compile, evaluate, isDiagnostic } from "xprsn";
+import { compile, evaluate } from "xprsn";
 
 // One-shot:
 evaluate("items[0].price * qty > 100", { items: [{ price: 60 }], qty: 2 });
@@ -42,103 +60,35 @@ evaluate('lower(name) == "robin"', { name: "ROBIN" }, { lower: (s) => s.toLowerC
 // => true
 ```
 
-## How far can you push this?
+Expressions read only from the values object you pass and call only the functions you register. Anything else — globals, `require`, the DOM — is simply not reachable.
 
-Pretty far. The same trick, a one-regex tokenizer feeding a parser that emits closures, carries into two sibling packages:
+## Is xprsn the right tool?
 
-- [sjabloon](https://github.com/getquario/sjabloon) is a full template engine built directly on xprsn: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
-- [padvinder](https://github.com/getquario/padvinder) is a JSONPath engine that started here and grew its own parser. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and now passes the full RFC 9535 compliance suite as a standalone, zero-dependency package.
+xprsn evaluates one expression against one values object and returns one value. There are no statements, no local variables, no loops, and no I/O. That is the whole design, and it is worth checking against your problem before you install anything.
 
-## API
+**It fits when:**
 
-### `compile(expression, functions?, options?)`
+- Expressions come from your users, and storing them as strings in a database or config file is the natural thing to do.
+- You'd otherwise reach for `new Function`, and either can't (strict CSP, a runtime without string-to-code) or would rather not.
+- The people writing expressions are not programmers, so the syntax has to be typeable and forgiving — a missing key reads as `null` rather than crashing.
+- Bundle size is a real constraint. The whole language is about 2KB.
 
-Parses the expression and returns an evaluator function `(values?) => result`. Malformed input and unknown function names throw a `SyntaxError` at compile time.
+**Look elsewhere when:**
 
-The evaluator also carries `names`: the variables the expression reads, deduplicated. Property names, hash keys, and registry functions don't count; only the roots do.
+- You need a scripting language — variables, assignment, loops, user-defined functions. Expressions cannot express those, and the [multi-step recipe](#multi-step-expressions) below is a deliberate ceiling, not a stepping stone.
+- You want rules stored as structured data rather than text, so a visual builder can round-trip them without parsing. xprsn's input is a string.
+- You control both ends. If nobody but you writes the expressions, plain JavaScript is faster, smaller, and better tooled.
+- You need a sandbox. xprsn closes the route from an expression to the `Function` constructor; it does not limit what your own registered functions and exposed methods do once called. See [SECURITY.md](SECURITY.md).
+- You need CommonJS, or Node older than 22. See [Environments](#environments).
 
-```js
-const fn = compile("user.age > 18 and (discount ?? 0) > 0");
-fn.names; // => ['user', 'discount']
-```
+## More than one expression?
 
-When expressions come from your users, `names` is how you check a rule against a schema before saving it (`fn.names.every(n => n in schema)`), or how you find which stored rules read a field you're about to rename. In the multi-step pattern below, each step's `names` are its dependencies.
+An expression produces a single value. Two sibling packages carry the same closure-compiling approach further, and one of them may be closer to what you're actually after:
 
-The evaluator also exposes `functions`: the registry functions the expression calls (methods like `s.trim()` are not counted).
+- **[sjabloon](https://github.com/getquario/sjabloon)** — a template engine, if you need _text_ rather than a value: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
+- **[padvinder](https://github.com/getquario/padvinder)** — a JSONPath engine, if you need to _select many nodes_ out of a document rather than compute one value. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and passes the full RFC 9535 compliance suite as a standalone, zero-dependency package.
 
-```js
-const fn = compile("sum(price) > budget", { sum: (xs) => xs.reduce((a, b) => a + b, 0) });
-fn.functions; // => ['sum']
-```
-
-Unknown functions already throw at compile time. Use `functions` to check a stored expression against what its context allows, for example rejecting `sum(...)` where no row group is in scope.
-
-If your host injects its own variables into scope (`@` for the current row, `$` for the root, loop variables), pass them as `options.bound` so they're left out of `names`. Bound names still resolve at evaluation time; only the introspection output changes.
-
-```js
-compile("@.price * qty", {}, { bound: ["@"] }).names; // => ['qty']
-```
-
-The evaluator also carries `reads`: every root-name read with its span in the source, in source order. Duplicates and bound names are kept — `names` is the free, deduplicated view of `reads`. This is what an editor squiggles, hovers, and jumps from.
-
-```js
-compile("@.price * qty", {}, { bound: ["@"] }).reads;
-// => [{ name: '@', start: 0, end: 1 }, { name: 'qty', start: 10, end: 13 }]
-```
-
-### `signatures(functions?)`
-
-Describes a registry: one `{ name, arity, doc }` per entry, in the registry's own key order. `arity` is the function's declared parameter count (`fn.length`), unless the function carries its own numeric `arity` — the escape hatch for rest params and wrappers, whose `length` misleads. `doc` is the function's own `doc` string when it has one, and absent otherwise. This is what an editor shows as a signature hint on `sum(`.
-
-```js
-const sum = (rows, of) => rows.reduce((t, r) => t + of(r), 0);
-sum.doc = "sum(rows, of): total of a projection";
-signatures({ sum }); // => [{ name: 'sum', arity: 2, doc: 'sum(rows, of): total of a projection' }]
-```
-
-### `evaluate(expression, values?, functions?)`
-
-Shorthand for `compile(expression, functions)(values)`.
-
-There is no built-in parse cache; if you evaluate the same expressions repeatedly, memoize `compile`:
-
-```js
-const cache = new Map();
-const cached = (expr) => cache.get(expr) ?? cache.set(expr, compile(expr)).get(expr);
-```
-
-### Error diagnostics
-
-Errors produced by xprsn keep their `SyntaxError` or `TypeError` class and expose three machine-readable properties:
-
-- `code`: a stable category;
-- `start`: the zero-based source offset;
-- `end`: the exclusive source offset.
-
-The codes are `XPRSN_SYNTAX`, `XPRSN_UNKNOWN_FUNCTION`, `XPRSN_TOO_DEEP`, `XPRSN_NULL_BASE`, `XPRSN_BLOCKED_KEY`, and `XPRSN_NOT_CALLABLE`. End-of-input syntax errors use an empty span at the expression length. A computed property failure spans the bracket operation because its runtime key may not occur literally in the source.
-
-Errors thrown by registered functions, getters, methods, or value coercion hooks are host errors. xprsn passes them through unchanged and does not attach diagnostic fields.
-
-Use `isDiagnostic(error)` when a host needs to distinguish those errors. It returns `true` only for errors created by the same xprsn module instance. Copying a documented `code`, `start`, and `end` onto another error does not authenticate it. A diagnostic from another installed copy or module instance also returns `false`.
-
-Each function returned by `compile` also has `isDiagnostic(error)`. It returns `true` only for runtime guard errors created by that evaluator. An embedder can relocate a source span without treating a host function, getter, method, or coercion error as the outer expression's error. Compile-time diagnostics happen before an evaluator exists, so they authenticate only through the package-level predicate. `evaluate` does not expose its temporary evaluator; use `compile` when you need scoped authentication.
-
-#### Relocating a diagnostic
-
-An embedder that compiles xprsn source out of a larger document — a cell in a report, a field in a form — reports the fault in its own coordinates, not the expression's. `relocate(diagnostic, { prefix, offset })` returns the copy to re-throw:
-
-```js
-import { compile, isDiagnostic, relocate } from "xprsn";
-
-try {
-  compile(cell.slice(1)); // the leading "=" is not part of the expression
-} catch (error) {
-  if (!isDiagnostic(error)) throw error;
-  throw relocate(error, { prefix: "cell.value: ", offset: 1 });
-}
-```
-
-The copy keeps the original's class, prepends `prefix` to the message verbatim, shifts `start` and `end` by `offset`, and carries every other field across. It is registered exactly as the original was, so it passes `isDiagnostic` and — for a runtime fault — the evaluator's own `isDiagnostic` too. The original is left untouched. Relocation belongs here rather than in the embedder because authentication is by identity: a copy an embedder builds itself cannot be authenticated, and a field added to a diagnostic here would be a field the embedder's copy silently drops. Passing anything but a diagnostic from this instance throws a `TypeError`.
+All three are zero-dependency and safe under the same CSP terms.
 
 ## Syntax
 
@@ -165,14 +115,9 @@ The copy keeps the original's class, prepends `prefix` to the message verbatim, 
 
 Absence reads as `null`: an unknown variable or a missing property is `null` (not `undefined`), so `x == null` is the natural "is it there?" test. Present `null`/`0`/`false`/`""` are untouched, and registry function return values are left as-is. Reading _through_ a null base still throws, so use `?.`: `a?.b` yields `null` on a nullish base and guards each step on its own. Chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out `matches`, ranges (`..`), and bitwise operators.
 
-`$` and `@` are ordinary identifier characters, so a variable can be named `$` or `@` (they still read through the same prototype guard). On their own they buy little, since xprsn reads from one flat values object. They pay off once a host stacks nested scopes.
+`$` and `@` are ordinary identifier characters, so a variable can be named `$` or `@`. They read through the same guard as any other name, and matter most to hosts that stack nested scopes — see [Embedding xprsn](EMBEDDING.md#nested-scopes-and-bound-identifiers).
 
-[sjabloon](https://github.com/getquario/sjabloon), the template engine built on xprsn, is the concrete case. It layers a fresh child scope on every `{{#each}}` iteration with `Object.create`, so a loop variable and the surrounding variables coexist and an inner name shadows an outer one of the same name. In that setting a plain name always resolves to the nearest scope. Binding `$` and `@` gives an expression a fixed handle on a chosen level instead: set `@` to the current item and `$` to the root, and `@.price * $.taxRate` says exactly which scope each name comes from.
-
-```js
-evaluate("@.price * $.taxRate", { "@": { price: 20 }, $: { taxRate: 1.21 } });
-// => 24.2
-```
+## Recipes
 
 ### Multi-step expressions
 
@@ -227,17 +172,64 @@ compile("sum(orders, r => r.price * tax)", reducers).names; // => ['orders', 'ta
 
 Because the reducers are yours, you decide what they do: `sum`, `count`, `avg`, `any`, `map`, or a running total that keeps state between calls. xprsn only hands each one a per-item function. It never iterates for you, and a lambda cannot call itself (`f => f(f)` is a compile-time error), so an expression can't recurse into an infinite loop.
 
-## Content Security Policy
+### Caching compiled expressions
 
-This package works under a strict CSP such as:
+There is no built-in parse cache. If you evaluate the same expressions repeatedly, memoize `compile`:
 
+```js
+const cache = new Map();
+const cached = (expr) => cache.get(expr) ?? cache.set(expr, compile(expr)).get(expr);
 ```
-Content-Security-Policy: script-src 'self'
+
+## API
+
+### `compile(expression, functions?, options?)`
+
+Parses the expression and returns an evaluator function `(values?) => result`. Malformed input and unknown function names throw a `SyntaxError` at compile time.
+
+The evaluator also carries `names`: the variables the expression reads, deduplicated. Property names, hash keys, and registry functions don't count; only the roots do.
+
+```js
+const fn = compile("user.age > 18 and (discount ?? 0) > 0");
+fn.names; // => ['user', 'discount']
 ```
 
-It needs no `unsafe-eval` because the compiler only composes arrow functions that already exist in the shipped source; it never turns expression text into JavaScript. The test suite runs under `node --disallow-code-generation-from-strings`, which throws on any string-to-code construct the same way a strict CSP does, and a test checks the source for such constructs. The library never touches the DOM, so you don't need a Trusted Types policy.
+When expressions come from your users, `names` is how you check a rule against a schema before saving it (`fn.names.every(n => n in schema)`), or how you find which stored rules read a field you're about to rename. In the [multi-step pattern](#multi-step-expressions) above, each step's `names` are its dependencies.
 
-`npm run test:browser` serves `lib/` to Playwright Chromium under this policy, including blocked-key reads that should throw. The run checks that the library itself works under CSP. It does not sandbox registry functions or host objects you pass in.
+Evaluators carry two further properties aimed at hosts building editors and validators: [`reads`](EMBEDDING.md#reads), every root-name read with its span, and [`functions`](EMBEDDING.md#signaturesfunctions), the registry functions the expression calls. [`options.bound`](EMBEDDING.md#optionsbound) shapes what `names` reports.
+
+### `evaluate(expression, values?, functions?)`
+
+Shorthand for `compile(expression, functions)(values)`. Compiles every call, so prefer `compile` in a hot path.
+
+### `signatures(functions?)`
+
+Describes a registry — one `{ name, arity, doc }` per entry — for editors and function reference docs. See [EMBEDDING.md](EMBEDDING.md#signaturesfunctions).
+
+### Error diagnostics
+
+Errors produced by xprsn keep their `SyntaxError` or `TypeError` class and expose three machine-readable properties:
+
+- `code`: a stable category;
+- `start`: the zero-based source offset;
+- `end`: the exclusive source offset.
+
+The codes are `XPRSN_SYNTAX`, `XPRSN_UNKNOWN_FUNCTION`, `XPRSN_TOO_DEEP`, `XPRSN_NULL_BASE`, `XPRSN_BLOCKED_KEY`, and `XPRSN_NOT_CALLABLE`. End-of-input syntax errors use an empty span at the expression length. A computed property failure spans the bracket operation, because its runtime key may not occur literally in the source.
+
+Together they are enough to underline the offending characters back to whoever wrote the expression:
+
+```js
+import { compile, isDiagnostic } from "xprsn";
+
+try {
+  compile("price * (qty");
+} catch (error) {
+  if (!isDiagnostic(error)) throw error;
+  console.log(error.code, error.start, error.end); // XPRSN_SYNTAX 12 12
+}
+```
+
+Errors thrown by registered functions, getters, methods, or value coercion hooks are host errors. xprsn passes them through unchanged and does not attach diagnostic fields. `isDiagnostic(error)` is how you tell the two apart; it authenticates by identity rather than by shape, which has consequences worth knowing if you embed xprsn — see [EMBEDDING.md](EMBEDDING.md#diagnostic-identity).
 
 ## Safety
 
@@ -250,13 +242,31 @@ Expressions can only read the data you pass in:
 - Functions resolve from the registry you provide, at compile time.
 - Lambdas (`r => r.price`) compile to function values, but an expression can't call one; only your registry functions can. Reads inside a lambda still go through the guard, so they open no route to `Function`.
 
-Expressions can still call methods on the values you expose (`user.delete()`, say, if you pass such an object), so only pass data you are comfortable handing over.
+Expressions can still call methods on the values you expose (`user.delete()`, say, if you pass such an object), so only pass data you are comfortable handing over. [SECURITY.md](SECURITY.md) has the checklist to work through before accepting expressions from people you don't trust, and the process for reporting a vulnerability.
+
+## Content Security Policy
+
+This package works under a strict CSP such as:
+
+```
+Content-Security-Policy: script-src 'self'
+```
+
+It needs no `unsafe-eval` because the compiler only composes arrow functions that already exist in the shipped source; it never turns expression text into JavaScript. The test suite runs under `node --disallow-code-generation-from-strings`, which throws on any string-to-code construct the same way a strict CSP does, and a test checks the source for such constructs. The library never touches the DOM, so you don't need a Trusted Types policy.
+
+`npm run test:browser` serves `lib/` to Playwright Chromium under this policy, including blocked-key reads that should throw. The run checks that the library itself works under CSP. It does not sandbox registry functions or host objects you pass in.
 
 ## Environments
 
 Node.js 22 and newer, ESM only. Browser use is supported through a standards-based ESM bundler in environments supporting ES2024. Direct `<script>` globals, UMD, and CommonJS builds are not provided.
 
 Shipping CommonJS alongside ESM would put two copies of the core in any process that mixed `require` and `import`. Each copy would have its own diagnostic identity, so `isDiagnostic` would return `false` across the seam.
+
+TypeScript declarations are hand-written and ship in the package; `npm run check` runs `attw` against them.
+
+## Embedding xprsn
+
+If you compile xprsn source out of a larger document — a cell in a report, a field in a form, a rule in a workflow builder — [EMBEDDING.md](EMBEDDING.md) covers the surface built for that: expression introspection for validators and editors, registry signatures, diagnostic identity, relocating a fault into your own coordinates, and nested scopes with `@` and `$`.
 
 ## Contributing
 
@@ -267,7 +277,9 @@ npm install
 npm run check
 ```
 
-`npm run check` is the local gate. Conventions for this repo live in [AGENTS.md](AGENTS.md).
+`npm run check` is the local gate: formatting, lint, dead-code and dependency checks, the size budget, the unit and type suites, the browser CSP run, and the fuzz regression corpus. It is the same gate CI runs, so a green `check` locally means a green pull request.
+
+Conventions for this repo — architecture, semantics that look like bugs if you tidy them, and the commit format — live in [AGENTS.md](AGENTS.md).
 
 ## License
 

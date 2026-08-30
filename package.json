@@ -17,7 +17,8 @@
   },
   "repository": "getquario/xprsn",
   "files": [
-    "lib"
+    "lib",
+    "EMBEDDING.md"
   ],
   "type": "module",
   "module": "lib/index.js",

@@ -2,7 +2,7 @@
 
 Tiny, CSP-safe expression language for JavaScript. Plain JS + JSDoc, zero runtime dependencies. `lib/index.js` is the implementation and the package.
 
-Work is done when `npm run check` is green. Scripts live in `package.json`. Run them on Node: Bun accepts `--disallow-code-generation-from-strings` but does not enforce it. A single suite is `node --disallow-code-generation-from-strings --test test/evaluate.test.js`. Public syntax and API live in `README.md`.
+Work is done when `npm run check` is green. Scripts live in `package.json`. Run them on Node: Bun accepts `--disallow-code-generation-from-strings` but does not enforce it. A single suite is `node --disallow-code-generation-from-strings --test test/evaluate.test.js`. Public syntax and API live in `README.md`; the host-facing surface (`reads`, `bound`, `signatures`, `relocate`, diagnostic identity) lives in `EMBEDDING.md`.
 
 ## Architecture
 
