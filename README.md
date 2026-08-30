@@ -86,9 +86,9 @@ xprsn evaluates one expression against one values object and returns one value. 
 An expression produces a single value. Two sibling packages carry the same closure-compiling approach further, and one of them may be closer to what you're actually after:
 
 - **[sjabloon](https://github.com/getquario/sjabloon)** — a template engine, if you need _text_ rather than a value: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
-- **[padvinder](https://github.com/getquario/padvinder)** — a JSONPath engine, if you need to _select many nodes_ out of a document rather than compute one value. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and passes the full RFC 9535 compliance suite as a standalone, zero-dependency package.
+- **[padvinder](https://github.com/getquario/padvinder)** — a JSONPath engine, if you need to _select many nodes_ out of a document rather than compute one value. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and passes the full RFC 9535 compliance suite.
 
-All three are zero-dependency and safe under the same CSP terms.
+All three parse to closures and are safe under the same CSP terms. Their only runtime dependencies are each other and [waarmerk](https://github.com/getquario/waarmerk), the located-diagnostic module they share.
 
 ## Syntax
 

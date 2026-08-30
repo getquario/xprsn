@@ -219,3 +219,12 @@ test("relocate degrades to a plain Error when the original's prototype was repla
   assert.ok(moved instanceof Error, "an unrecognized class falls back to Error");
   assert.ok(isDiagnostic(moved), "and is still authenticated");
 });
+
+test("relocate names this package when it refuses, not its dependency", () => {
+  // The message is documented here, and the guard has to stay here to keep it:
+  // waarmerk refuses in its own name, which is a package the caller never chose.
+  assert.throws(
+    () => relocate(SyntaxError("from somewhere else")),
+    (e) => e instanceof TypeError && e.message === "Not a diagnostic from xprsn",
+  );
+});

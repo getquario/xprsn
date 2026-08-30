@@ -2,6 +2,8 @@
  * Hand-written declarations — bundler type generation is disabled.
  */
 
+import type { Diagnostic, Relocation } from "waarmerk";
+
 export type XprsnErrorCode =
   | "XPRSN_SYNTAX"
   | "XPRSN_UNKNOWN_FUNCTION"
@@ -10,7 +12,12 @@ export type XprsnErrorCode =
   | "XPRSN_BLOCKED_KEY"
   | "XPRSN_NOT_CALLABLE";
 
-export interface XprsnDiagnostic extends Error {
+/**
+ * The fields and their meanings are waarmerk's; this names the code union they
+ * are checked against, and narrows the three this module always carries from
+ * optional to required.
+ */
+export interface XprsnDiagnostic extends Diagnostic<XprsnErrorCode> {
   readonly code: XprsnErrorCode;
   readonly start: number;
   readonly end: number;
@@ -45,15 +52,17 @@ export function isDiagnostic(error: unknown): error is XprsnDiagnostic;
 
 /**
  * Copy a diagnostic into an embedder's coordinates: `prefix` is prepended to
- * the message verbatim, `offset` shifts the span, every other field is carried
- * over, and the copy is authenticated exactly as the original was.
+ * the message verbatim, the span is moved, every other field is carried over,
+ * and the copy is authenticated exactly as the original was.
+ *
+ * `offset` shifts the span, for an embedder that handed over a verbatim slice
+ * of its own text. `span` replaces it, for one whose text reached the
+ * expression through a decode and so has no offset to shift. `span` wins when
+ * both are given.
  *
  * @throws {TypeError} When `diag` is not a diagnostic from this instance.
  */
-export function relocate(
-  diag: unknown,
-  opts?: { prefix?: string; offset?: number },
-): XprsnDiagnostic;
+export function relocate(diag: unknown, opts?: Relocation): XprsnDiagnostic;
 
 /**
  * Compile an expression once, evaluate it many times.

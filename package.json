@@ -51,6 +51,9 @@
     "test:types": "tsc && attw --pack . --profile esm-only",
     "test:unit": "c8 --100 --src lib/ node --disallow-code-generation-from-strings --test --test-concurrency=1 test/*.test.js"
   },
+  "dependencies": {
+    "waarmerk": "^0.1.0"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.3",
     "@jazzer.js/bug-detectors": "^4.0.0",
@@ -69,6 +72,9 @@
   "size-limit": [
     {
       "path": "lib/index.js",
+      "ignore": [
+        "waarmerk"
+      ],
       "limit": "2.25 kB"
     }
   ],

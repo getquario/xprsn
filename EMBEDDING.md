@@ -132,11 +132,23 @@ try {
 ```
 
 The copy keeps the original's class, prepends `prefix` to the message verbatim,
-shifts `start` and `end` by `offset`, and carries every other field across. It is
-registered exactly as the original was, so it passes `isDiagnostic` and — for a
-runtime fault — the evaluator's own `isDiagnostic` too. The original is left
-untouched. Passing anything but a diagnostic from this instance throws a
-`TypeError`.
+moves the span, and carries every other field across. It is registered exactly as
+the original was, so it passes `isDiagnostic` and — for a runtime fault — the
+evaluator's own `isDiagnostic` too. The original is left untouched. Passing
+anything but a diagnostic from this instance throws a `TypeError`.
+
+`offset` shifts the span, and it is right whenever the expression was a verbatim
+slice of your text, as above. It is wrong when your text was **decoded** first —
+an expression read out of a JSON string literal, where an escape makes every
+later offset slide. There is no offset that fixes that, so name the region the
+expression came from instead:
+
+```js
+throw relocate(error, { prefix: "rules[2].when: ", span: [16, 34] });
+```
+
+`span` replaces the span outright and wins if you pass both. Neither option adds
+a span to a diagnostic that had none.
 
 Relocation lives here rather than in the embedder because authentication is by
 identity: a copy an embedder builds itself cannot be authenticated, and a field

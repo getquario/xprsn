@@ -14,18 +14,26 @@ const CSP = [
   "form-action 'none'",
 ].join("; ");
 
+// The bare specifier a bundler would resolve; the browser cannot, so each
+// occurrence is rewritten to the path this server serves the dependency from.
+// Global: a JSDoc `@import` names it ahead of the real statement.
+const built = (await readFile(new URL("../../lib/index.js", import.meta.url), "utf8")).replace(
+  /from\s*["']waarmerk["']/g,
+  'from"/waarmerk.js"',
+);
+
 const files = new Map([
   ["/", ["text/html; charset=utf-8", await readFile(new URL("./index.html", import.meta.url))]],
   [
     "/browser.js",
     ["text/javascript; charset=utf-8", await readFile(new URL("./browser.js", import.meta.url))],
   ],
+  ["/lib/index.js", ["text/javascript; charset=utf-8", built]],
+  // Resolved through the exports map rather than a hardcoded path, so this
+  // keeps working whichever directory waarmerk publishes its entry from.
   [
-    "/lib/index.js",
-    [
-      "text/javascript; charset=utf-8",
-      await readFile(new URL("../../lib/index.js", import.meta.url)),
-    ],
+    "/waarmerk.js",
+    ["text/javascript; charset=utf-8", await readFile(new URL(import.meta.resolve("waarmerk")))],
   ],
 ]);
 
