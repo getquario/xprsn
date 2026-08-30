@@ -56,6 +56,36 @@ test("prototype escape hatches are blocked", () => {
   );
 });
 
+test("a key that only becomes a blocked name once coerced is blocked", () => {
+  // A registry return is an arbitrary host value. Its toString() runs when the
+  // property is read, so the guard has to compare the coerced key, not the
+  // object it came from.
+  const hatch = () => ({ toString: () => "constructor" });
+  assert.throws(
+    () => evaluate("a[hatch()]", { a: {} }, { hatch }),
+    TypeError,
+    "an object keyed by its toString() does not slip past the guard",
+  );
+  assert.strictEqual(
+    caught(() => evaluate("a[hatch()]", { a: {} }, { hatch })).code,
+    "XPRSN_BLOCKED_KEY",
+    "and it reports the blocked-key code, not a null base",
+  );
+
+  // The guard coerces once and reads with that same string, so a toString()
+  // that answers differently on a second call cannot swap the key underneath it.
+  let calls = 0;
+  const flip = () => ({ toString: () => (calls++ ? "safe" : "constructor") });
+  assert.throws(
+    () => evaluate("a[flip()]", { a: { safe: 1 } }, { flip }),
+    TypeError,
+    "a key that changes between the check and the read is still blocked",
+  );
+
+  assert.strictEqual(evaluate("a[k]", { a: [10, 20], k: 1 }), 20, "numeric keys still index");
+  assert.strictEqual(evaluate("a[b]", { a: { 3: "x" }, b: 3 }), "x", "and still coerce to strings");
+});
+
 test("hash literals cannot pollute prototypes", () => {
   const before = {}.polluted;
   const h = evaluate('{"__proto__": {"polluted": true}}');
