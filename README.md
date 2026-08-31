@@ -274,6 +274,7 @@ If you compile xprsn source out of a larger document — a cell in a report, a f
 git clone https://github.com/getquario/xprsn.git
 cd xprsn
 npm install
+git config core.hooksPath .githooks   # enable the commit-msg hook
 npm run check
 ```
 

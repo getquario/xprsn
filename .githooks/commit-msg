@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# No workflow here checks commit messages, so a missing commitlint means no
+# gate at all rather than a later failure. A checkout without `npm install` is
+# already broken for `npm run check`; say so and stop.
+commitlint="$(git rev-parse --show-toplevel)/node_modules/.bin/commitlint"
+
+if [ ! -x "$commitlint" ]; then
+  echo "commit-msg: commitlint is not installed and nothing else checks commit messages. Run: npm install" >&2
+  exit 1
+fi
+
+exec "$commitlint" --edit "$1"
