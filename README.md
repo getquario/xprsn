@@ -20,11 +20,7 @@ evaluate('user.age > 18 and "admin" in user.roles', {
 //=> true
 ```
 
-<a href="https://webstronauts.com?utm_source=github&utm_medium=readme&utm_campaign=xprsn">
-	<picture>
-		<img src="https://webstronauts.com/images/sponsored-by.svg" alt="Sponsored by The Webstronauts" width="200" height="65">
-	</picture>
-</a>
+<img src="https://getquario.com/favicon.svg" alt="Quario logo" width="16" height="16" /> <b>xprsn</b> is built by the team behind <b><a href="https://getquario.com?utm_source=github&utm_medium=readme&utm_campaign=xprsn">Quario</a></b>, a declarative reporting engine for JavaScript that renders JSON report definitions to <b>HTML, PDF, workbooks, and Word</b> — without <code>eval</code>.
 
 ## Contents
 
