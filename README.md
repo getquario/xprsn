@@ -1,21 +1,30 @@
 # xprsn
 
-A tiny, CSP-safe expression language for JavaScript. **~2.0KB min+compressed, one tiny dependency.**
+A tiny expression language for JavaScript. It evaluates expressions your users write — `user.age > 18 and "admin" in user.roles` — against data you pass in, without ever running them as JavaScript.
 
-[![NPM version](https://img.shields.io/npm/v/xprsn.svg)](https://www.npmjs.com/package/xprsn)
-[![Build Status](https://github.com/getquario/xprsn/actions/workflows/test.yml/badge.svg)](https://github.com/getquario/xprsn/actions/workflows/test.yml)
-[![NPM downloads](https://img.shields.io/npm/dm/xprsn.svg)](https://www.npmjs.com/package/xprsn)
-[![Apache-2.0 license](https://img.shields.io/github/license/getquario/xprsn.svg)](https://github.com/getquario/xprsn/blob/main/LICENSE)
+Each expression is parsed into a chain of plain closures, so there is no `eval` and no `new Function` anywhere in the library. Because nothing is turned into JavaScript source, xprsn works unchanged under a strict Content Security Policy, where the usual `new Function` shortcut is blocked outright. That makes it a fit wherever the expression is written by someone other than you — a rule in a form builder, a filter in a query UI, a formula in a spreadsheet cell, a condition on a workflow step.
+
+- **Tiny.** 2.4 kB minified and brotlied, including its one dependency.
+- **CSP-safe.** Runs under `script-src 'self'`. A Playwright suite loads the published file under that policy, and the tests run on `node --disallow-code-generation-from-strings`.
+- **Hardened.** `__proto__`, `constructor` and `prototype` are rejected on every read, closing the `x.constructor.constructor(...)` route to `Function`. 100% branch coverage, plus three fuzz targets.
+- **Forgiving.** A missing key or unknown variable reads as `null` instead of crashing — the syntax is meant for people who don't write code.
+- **Made for editors.** Every error carries a stable `code` and a `start`/`end` span to underline, and every compiled expression lists the variables it reads.
+- **Fast.** ~9.8M evaluations/sec once compiled (`npm run bench`, Node 24 on arm64).
+
+```js
+import { evaluate } from "xprsn";
+
+evaluate('user.age > 18 and "admin" in user.roles', {
+  user: { age: 30, roles: ["admin"] },
+});
+//=> true
+```
 
 <a href="https://webstronauts.com?utm_source=github&utm_medium=readme&utm_campaign=xprsn">
 	<picture>
 		<img src="https://webstronauts.com/images/sponsored-by.svg" alt="Sponsored by The Webstronauts" width="200" height="65">
 	</picture>
 </a>
-
-Evaluates expressions like `user.age > 18 and "admin" in user.roles` against data you provide, without running them as JavaScript. xprsn parses each expression into a chain of plain closures, so there is no `eval` and no `new Function`.
-
-That makes it a fit wherever the expression is written by someone other than you — a rule in a form builder, a filter in a query UI, a formula in a spreadsheet cell, a condition on a workflow step — and especially where a strict Content Security Policy rules out the usual `new Function` shortcut.
 
 ## Contents
 
@@ -71,7 +80,7 @@ xprsn evaluates one expression against one values object and returns one value. 
 - Expressions come from your users, and storing them as strings in a database or config file is the natural thing to do.
 - You'd otherwise reach for `new Function`, and either can't (strict CSP, a runtime without string-to-code) or would rather not.
 - The people writing expressions are not programmers, so the syntax has to be typeable and forgiving — a missing key reads as `null` rather than crashing.
-- Bundle size is a real constraint. The whole language is about 2KB.
+- Bundle size is a real constraint. The whole language is 2.4 kB minified and brotlied.
 
 **Look elsewhere when:**
 
