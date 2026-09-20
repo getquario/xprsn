@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { readFileSync } from "node:fs";
 import { FuzzedDataProvider } from "@jazzer.js/core";
 import { compile, isDiagnostic } from "../lib/index.js";
 import { isCompileErr, isEvalErr } from "./lib.js";
@@ -24,9 +25,44 @@ const OPS = [
   "??",
   "in",
 ];
-const UNARY = ["!", "-", "+", "not "];
 const KEYS = ["a", "b", "c", "x", "y", "z", "foo", "bar", "val", "n"];
-const BLOCKED = ["__proto__", "constructor", "prototype"];
+
+// UNARY and BLOCKED are read out of the library source rather than restated.
+// A copy that drifted would leave the generator emitting the old set, so the
+// operator or key it stopped emitting is exactly the one no longer being
+// fuzzed — and BLOCKED is the list get() guards on. A source shape this cannot
+// read throws instead of yielding a short list.
+const LIB = readFileSync(new URL("../lib/index.js", import.meta.url), "utf8");
+
+const bodyOf = (re, name) => {
+  const found = LIB.match(re);
+  if (!found) throw new Error(`fuzz: cannot read ${name} out of lib/index.js`);
+  return found[1];
+};
+
+const nonEmpty = (keys, name) => {
+  if (!keys.length) throw new Error(`fuzz: ${name} in lib/index.js read as empty`);
+  return keys;
+};
+
+// A word operator needs a separator before its operand; a symbol does not.
+const spaced = (op) => (/\w$/.test(op) ? `${op} ` : op);
+
+const UNARY = nonEmpty(
+  [
+    ...bodyOf(/\bconst UNARY = table\(\{([^}]*)\}\)/, "UNARY").matchAll(
+      /(?:"([^"]+)"|([A-Za-z_$][\w$]*))\s*:/g,
+    ),
+  ].map(([, quoted, bare]) => quoted ?? bare),
+  "UNARY",
+).map(spaced);
+
+const BLOCKED = nonEmpty(
+  [...bodyOf(/\bconst BLOCKED = new Set\(\[([^\]]*)\]\)/, "BLOCKED").matchAll(/"([^"]+)"/g)].map(
+    ([, key]) => key,
+  ),
+  "BLOCKED",
+);
 
 // Registry passed to compile so the fuzzer exercises the function-call and
 // arrow-lambda reducer paths (lib/index.js). Every function is TOTAL — it never
