@@ -31,9 +31,11 @@
   },
   "scripts": {
     "bench": "node --disallow-code-generation-from-strings bench/index.js",
-    "check": "run-s fmt:check lint fallow size test test:browser fuzz:regression",
+    "check": "run-s fmt:check lint fallow:lint size test fallow:health test:browser fuzz:regression",
     "commitlint": "commitlint",
-    "fallow": "fallow",
+    "fallow": "run-s fallow:lint fallow:health",
+    "fallow:health": "fallow health --coverage coverage/coverage-final.json",
+    "fallow:lint": "fallow dead-code && fallow dupes",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "fuzz": "npm run fuzz:prepare && run-s fuzz:compile fuzz:evaluate fuzz:structured",
@@ -50,7 +52,7 @@
     "test": "run-s test:unit test:types",
     "test:browser": "playwright install chromium && node test/browser/harness.js",
     "test:types": "tsc && attw --pack . --profile esm-only",
-    "test:unit": "c8 --100 --src lib/ node --disallow-code-generation-from-strings --test --test-concurrency=1 test/*.test.js"
+    "test:unit": "c8 --100 --src lib/ --reporter=text --reporter=json node --disallow-code-generation-from-strings --test --test-concurrency=1 test/*.test.js"
   },
   "dependencies": {
     "waarmerk": "^0.1.0"
@@ -63,7 +65,7 @@
     "@jazzer.js/core": "^4.0.0",
     "@size-limit/preset-small-lib": "^13.0.3",
     "c8": "^12.0.0",
-    "fallow": "^3.17.0",
+    "fallow": "^3.21.0",
     "npm-run-all": "^4.1.5",
     "oxfmt": "^0.67.0",
     "oxlint": "^1.78.0",
