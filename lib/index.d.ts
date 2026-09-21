@@ -10,7 +10,8 @@ export type XprsnErrorCode =
   | "XPRSN_TOO_DEEP"
   | "XPRSN_NULL_BASE"
   | "XPRSN_BLOCKED_KEY"
-  | "XPRSN_NOT_CALLABLE";
+  | "XPRSN_NOT_CALLABLE"
+  | "XPRSN_PENDING_VALUE";
 
 /**
  * The fields and their meanings are waarmerk's; this names the code union they

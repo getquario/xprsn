@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compile, evaluate, signatures } from "../lib/index.js";
+import { compile, evaluate, isDiagnostic, signatures } from "../lib/index.js";
 
 test("literals", () => {
   assert.strictEqual(evaluate("42"), 42);
@@ -504,3 +504,69 @@ test("lambda params are excluded from names but reducers are reported", () => {
     "a same-named outer var still counts outside the lambda",
   );
 });
+
+const later = { fetch: (x) => Promise.resolve(x), plain: (x) => x * 2 };
+
+test("a registry function's promise survives only as the whole expression", async () => {
+  const f = compile("fetch(a)", later);
+  const out = f({ a: 7 });
+  assert.ok(typeof out.then === "function", "the root call hands its promise back untouched");
+  assert.strictEqual(await out, 7);
+  assert.strictEqual(
+    evaluate("plain(a)", { a: 3 }, later),
+    6,
+    "a synchronous return is unaffected",
+  );
+});
+
+test("a promise reaching an operator is a located fault", () => {
+  const check = (src, values, start, end, why) => {
+    assert.throws(
+      () => evaluate(src, values, later),
+      (e) => {
+        assert.ok(e instanceof TypeError, why);
+        assert.ok(isDiagnostic(e), why);
+        assert.strictEqual(e.code, "XPRSN_PENDING_VALUE", why);
+        assert.deepStrictEqual([e.start, e.end], [start, end], why);
+        assert.match(e.message, /fetch returned a promise/, why);
+        return true;
+      },
+      why,
+    );
+  };
+  check("fetch(a) + 1", { a: 1 }, 0, 8, "left of a binary operator");
+  check("1 + fetch(a)", { a: 1 }, 4, 12, "right of a binary operator");
+  check("plain(fetch(a))", { a: 1 }, 6, 14, "an argument to another call");
+  check("fetch(a).name", { a: 1 }, 0, 8, "the base of a property read");
+  check("not fetch(a)", { a: 1 }, 4, 12, "the operand of a unary");
+  check("fetch(a) ? 1 : 2", { a: 1 }, 0, 8, "a ternary condition");
+});
+
+test("a promise inside a lambda body is a located fault", () => {
+  assert.throws(
+    () => evaluate("map(rows, r => fetch(r))", { rows: [1] }, { ...reducers, ...later }),
+    (e) => {
+      assert.strictEqual(e.code, "XPRSN_PENDING_VALUE");
+      assert.deepStrictEqual([e.start, e.end], [15, 23]);
+      return true;
+    },
+  );
+});
+
+// A hand-rolled thenable is the subject here, not an accident: the guard must
+// read `then` rather than test for a real Promise.
+// oxlint-disable unicorn/no-thenable
+test("any thenable counts, and nothing else does", () => {
+  const odd = {
+    hand: () => ({ then: (r) => r(1) }),
+    obj: () => ({ a: 1 }),
+    fn: () => () => 1,
+  };
+  assert.throws(() => evaluate("hand(1) + 1", {}, odd), { code: "XPRSN_PENDING_VALUE" });
+  assert.strictEqual(evaluate("plain(a) + 1", { a: 2 }, later), 5, "a nested sync return passes");
+  assert.strictEqual(evaluate("none(1) ?? 9", {}, { none: () => null }), 9, "a nested null passes");
+  assert.deepStrictEqual(evaluate("soon(1)", {}, { soon: () => ({ then: 1 }) }), { then: 1 });
+  assert.deepStrictEqual(evaluate("obj(1)", {}, odd), { a: 1 }, "a plain object passes");
+  assert.strictEqual(typeof evaluate("fn(1)", {}, odd), "function", "a function passes");
+});
+// oxlint-enable unicorn/no-thenable

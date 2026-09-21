@@ -26,7 +26,7 @@ Size is a soft goal (budget in `package.json`). Name bindings for readers; a con
 - `==` / `!=` compile to `===` / `!==`.
 - `and` / `or` / `&&` / `||` / `??` short-circuit; `**` is right-associative; `??` is the lowest binary op.
 - `a ?: b` keeps `a` when truthy, else `b`.
-- A missing key or variable reads as `null` (inside `get()`). Present `null` / `0` / `false` / `""` pass through. Registry returns are left as-is. Reading through a null base throws; `?.` guards per step, so `a?.b.c` still throws if `a` is null. The tokenizer's `(?!\d)` on `?.` keeps `a ?.5 : b` a ternary.
+- A missing key or variable reads as `null` (inside `get()`). Present `null` / `0` / `false` / `""` pass through. Registry returns are left as-is, except a thenable, which is returned only when the call is the whole expression -- elsewhere it throws `XPRSN_PENDING_VALUE`, because an operator would consume it unawaited. `ident` leaves a cell that `compile` marks once the root node is known. Reading through a null base throws; `?.` guards per step, so `a?.b.c` still throws if `a` is null. The tokenizer's `(?!\d)` on `?.` keeps `a ?.5 : b` a ternary.
 - Unknown functions and malformed input throw `SyntaxError` at compile time. Null-base and blocked-key access throw `TypeError` at runtime.
 - `names` lists free root variables. Unknown variables evaluate to `null`; validate via `names`.
 - Expressions are read-only.
