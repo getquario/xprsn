@@ -63,7 +63,7 @@
     "@commitlint/config-conventional": "^21.2.2",
     "@jazzer.js/bug-detectors": "^4.0.0",
     "@jazzer.js/core": "^4.0.0",
-    "@size-limit/preset-small-lib": "^13.0.3",
+    "@size-limit/preset-small-lib": "^14.0.0",
     "c8": "^12.0.0",
     "fallow": "^3.21.0",
     "npm-run-all": "^4.1.5",
@@ -71,7 +71,7 @@
     "oxlint": "^1.78.0",
     "oxlint-tsgolint": "^7.0.2001",
     "playwright": "^1.61.1",
-    "size-limit": "^13.0.3",
+    "size-limit": "^14.0.0",
     "typescript": "7.0.2"
   },
   "size-limit": [
