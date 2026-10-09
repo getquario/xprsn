@@ -31,8 +31,29 @@ Duplicates and bound names are kept — `names` is the free, deduplicated view o
 
 ```js
 compile("@.price * qty", {}, { bound: ["@"] }).reads;
-// => [{ name: '@', start: 0, end: 1 }, { name: 'qty', start: 10, end: 13 }]
+// => [
+//   { name: '@', start: 0, end: 1, path: ['price'] },
+//   { name: 'qty', start: 10, end: 13, path: [] },
+// ]
 ```
+
+`path` lists the literal member names that follow the root. It stops at the
+first computed key or method call. A method name is never part of it. When the
+expression reads further under the path through a step the path cannot name, the
+read also carries `dynamic: true`. A computed key does that, and so does any step
+past a method call:
+
+```js
+compile("order.lines[i].qty").reads[0];
+// => { name: 'order', start: 0, end: 5, path: ['lines'], dynamic: true }
+compile("order.name.trim()").reads[0];
+// => { name: 'order', start: 0, end: 5, path: ['name'] }
+```
+
+A host checks a data shape against these paths. A `dynamic` read can be checked
+only up to its path. A parenthesised base or a call result has no path of its
+own, because its steps are members of a value, not of a name. A lambda's param is
+a root like any other, so `x => x.v` reads `x` with the path `['v']`.
 
 This is what an editor squiggles, hovers, and jumps from. An unknown variable is
 not an error in xprsn — it evaluates to `null` — so an editor that wants to warn

@@ -24,11 +24,18 @@ export interface XprsnDiagnostic extends Diagnostic<XprsnErrorCode> {
   readonly end: number;
 }
 
-/** One root-name read, with its span in the source expression. */
+/**
+ * One root-name read, with its span in the source expression. `path` is the
+ * literal member names that follow the root, up to the first computed key or
+ * method call. `dynamic` is `true` when the expression reads further under
+ * that path through a step `path` cannot name.
+ */
 export interface XprsnRead {
   name: string;
   start: number;
   end: number;
+  path: string[];
+  dynamic?: true;
 }
 
 /** One registry entry described: `doc` is absent unless the function carries one. */

@@ -284,33 +284,33 @@ test("bound names are excluded from free variables", () => {
 
 test("compiled functions expose located reads", () => {
   assert.deepStrictEqual(compile("a + b").reads, [
-    { name: "a", start: 0, end: 1 },
-    { name: "b", start: 4, end: 5 },
+    { name: "a", start: 0, end: 1, path: [] },
+    { name: "b", start: 4, end: 5, path: [] },
   ]);
   assert.deepStrictEqual(
     compile("a + a").reads,
     [
-      { name: "a", start: 0, end: 1 },
-      { name: "a", start: 4, end: 5 },
+      { name: "a", start: 0, end: 1, path: [] },
+      { name: "a", start: 4, end: 5, path: [] },
     ],
     "every occurrence, in source order — names is the deduplicated view",
   );
   assert.deepStrictEqual(
     compile("user.name.toUpperCase()").reads,
-    [{ name: "user", start: 0, end: 4 }],
-    "only the root, not properties or methods",
+    [{ name: "user", start: 0, end: 4, path: ["name"] }],
+    "the root and its static member path; a method name is not a field",
   );
   assert.deepStrictEqual(
     compile("f(a)", { f: (x) => x }).reads,
-    [{ name: "a", start: 2, end: 3 }],
+    [{ name: "a", start: 2, end: 3, path: [] }],
     "a function name is a call, not a read",
   );
   assert.deepStrictEqual(compile('42 + "x"').reads, [], "literals read nothing");
   assert.deepStrictEqual(
     compile("items[i + 1]").reads,
     [
-      { name: "items", start: 0, end: 5 },
-      { name: "i", start: 6, end: 7 },
+      { name: "items", start: 0, end: 5, path: [], dynamic: true },
+      { name: "i", start: 6, end: 7, path: [] },
     ],
     "index expressions are scanned too",
   );
@@ -322,18 +322,62 @@ test("reads keep bound names that names omits", () => {
   assert.deepStrictEqual(
     f.reads,
     [
-      { name: "@", start: 0, end: 1 },
-      { name: "qty", start: 10, end: 13 },
+      { name: "@", start: 0, end: 1, path: ["price"] },
+      { name: "qty", start: 10, end: 13, path: [] },
     ],
     "a bound read is still a read",
   );
   assert.deepStrictEqual(
     compile("sum(xs, x => x.v)", { sum: (xs, of) => xs.map(of) }).reads,
     [
-      { name: "xs", start: 4, end: 6 },
-      { name: "x", start: 13, end: 14 },
+      { name: "xs", start: 4, end: 6, path: [] },
+      { name: "x", start: 13, end: 14, path: ["v"] },
     ],
     "a lambda body's param read is located; the declaration is not a read",
+  );
+});
+
+test("a read carries the static member path off its root", () => {
+  const path = (src, fns) =>
+    compile(src, fns).reads.map(({ name, path, dynamic }) => ({ name, path, dynamic }));
+  assert.deepStrictEqual(path("a.b.c"), [{ name: "a", path: ["b", "c"], dynamic: undefined }]);
+  assert.deepStrictEqual(
+    path("a?.b?.c"),
+    [{ name: "a", path: ["b", "c"], dynamic: undefined }],
+    "an optional step is still a static one",
+  );
+  assert.deepStrictEqual(
+    path("a.b[k].c"),
+    [
+      { name: "a", path: ["b"], dynamic: true },
+      { name: "k", path: [], dynamic: undefined },
+    ],
+    "a computed key ends the path and marks the rest dynamic",
+  );
+  assert.deepStrictEqual(
+    path('a["b"]'),
+    [{ name: "a", path: [], dynamic: true }],
+    "a bracket is computed even over a literal",
+  );
+  assert.deepStrictEqual(
+    path("a.b.trim()"),
+    [{ name: "a", path: ["b"], dynamic: undefined }],
+    "a method call ends the path without reading further",
+  );
+  assert.deepStrictEqual(
+    path("a.b.first().c"),
+    [{ name: "a", path: ["b"], dynamic: true }],
+    "a step past a method call reads something the path does not name",
+  );
+  assert.deepStrictEqual(
+    path("(a).b"),
+    [{ name: "a", path: [], dynamic: undefined }],
+    "a parenthesised base is a value, not a member chain",
+  );
+  assert.deepStrictEqual(
+    path("f(a).b", { f: (x) => x }),
+    [{ name: "a", path: [], dynamic: undefined }],
+    "a call result is not a member of its argument",
   );
 });
 
