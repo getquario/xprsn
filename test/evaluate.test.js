@@ -89,17 +89,25 @@ test("comparison", () => {
   assert.strictEqual(evaluate("1 == 1"), true);
   assert.strictEqual(evaluate('1 == "1"'), false, "== is strict");
   assert.strictEqual(evaluate('1 != "1"'), true, "!= is strict");
+  assert.strictEqual(evaluate("1 != 1"), false);
   assert.strictEqual(evaluate("2 < 3"), true);
+  assert.strictEqual(evaluate("3 < 3"), false, "< excludes its boundary");
   assert.strictEqual(evaluate("3 <= 3"), true);
+  assert.strictEqual(evaluate("4 <= 3"), false);
   assert.strictEqual(evaluate("4 > 5"), false);
+  assert.strictEqual(evaluate("5 > 4"), true);
+  assert.strictEqual(evaluate("3 > 3"), false, "> excludes its boundary");
   assert.strictEqual(evaluate("5 >= 5"), true);
+  assert.strictEqual(evaluate("3 >= 4"), false);
 });
 
 test("logical operators", () => {
   assert.strictEqual(evaluate("true and false"), false);
   assert.strictEqual(evaluate("true && true"), true);
+  assert.strictEqual(evaluate("true && false"), false);
   assert.strictEqual(evaluate("false or true"), true);
   assert.strictEqual(evaluate("false || false"), false);
+  assert.strictEqual(evaluate("false || true"), true);
 });
 
 test("short-circuiting", () => {
@@ -546,6 +554,16 @@ test("lambda params are excluded from names but reducers are reported", () => {
     compile("r + sum(a, r => r)", reducers).names,
     ["r", "a"],
     "a same-named outer var still counts outside the lambda",
+  );
+  assert.deepStrictEqual(
+    compile("sum(a, r => r) + r", reducers).names,
+    ["a", "r"],
+    "the param is free again once the lambda closes",
+  );
+  assert.deepStrictEqual(
+    compile("map(a, r => map(b, r => r) ~ r)", reducers).names,
+    ["a", "b"],
+    "an inner param of the same name leaves the outer one bound",
   );
 });
 

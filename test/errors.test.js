@@ -80,6 +80,8 @@ test("compile errors expose stable codes and source spans", () => {
   check("1 + )", "XPRSN_SYNTAX", 4, 5);
   check('"abc', "XPRSN_SYNTAX", 0, 4);
   check(String.raw`'\x41'`, "XPRSN_SYNTAX", 0, 6);
+  // `\'` is normalized away only for single-quoted text; this reaches JSON as written.
+  check(String.raw`"a\'b"`, "XPRSN_SYNTAX", 0, 6);
   check("nope(1)", "XPRSN_UNKNOWN_FUNCTION", 0, 4);
 
   const deep = "(".repeat(50000) + "1" + ")".repeat(50000);

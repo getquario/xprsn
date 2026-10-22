@@ -122,6 +122,9 @@ test("runtime diagnostics identify the failing read operation", () => {
   check("constructor", {}, "XPRSN_BLOCKED_KEY", 0, 11);
   check("a[key]", { a: {}, key: "constructor" }, "XPRSN_BLOCKED_KEY", 1, 6);
   check("a.m()", { a: { m: 1 } }, "XPRSN_NOT_CALLABLE", 2, 5);
+  // A missing method normalizes to null, which still has to reach the guard as a
+  // diagnostic rather than as the engine's own error.
+  check("a.m()", { a: {} }, "XPRSN_NOT_CALLABLE", 2, 5);
 });
 
 test("runtime diagnostic provenance is scoped to its evaluator", () => {
