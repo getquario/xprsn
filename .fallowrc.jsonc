@@ -3,6 +3,9 @@
   // Reached by `tsc` through tsconfig's `include`, not by an import or a script
   // path, so it sits outside the graph fallow walks from package.json.
   "entry": ["test/types.check.ts"],
+  // Stryker resolves `testRunner: "tap"` to this package by naming convention at
+  // run time, so no import or script path names it.
+  "ignoreDependencies": ["@stryker-mutator/tap-runner"],
   "health": {
     "ignore": ["bench/**", "fuzz/**"],
   },

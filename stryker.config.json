@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "testRunner": "tap",
+  "tap": {
+    "testFiles": ["test/*.test.js"],
+    "nodeArgs": [
+      "--test-reporter=tap",
+      "--test-skip-pattern=string-to-code",
+      "--disallow-code-generation-from-strings"
+    ]
+  },
+  "mutate": ["lib/*.js"],
+  "reporters": ["clear-text", "progress", "html"],
+  "coverageAnalysis": "perTest",
+  "tsconfigFile": ""
+}
