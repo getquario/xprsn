@@ -28,9 +28,6 @@ updates:
         patterns:
           - "@size-limit/*"
           - "size-limit"
-      stryker:
-        patterns:
-          - "@stryker-mutator/*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
